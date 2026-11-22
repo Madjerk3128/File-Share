@@ -1526,6 +1526,19 @@
               <span>Connect</span> <span>→</span>
             </button>
           </div>
+
+          <!-- Direct GoFile Link / Code Input -->
+          <div style="margin-top:20px; padding-top:16px; border-top:1px dashed var(--border); text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;">
+              &mdash; Or Paste GoFile Link / Code Directly &mdash;
+            </div>
+            <div style="display:flex; gap:8px; max-width:440px; margin:0 auto;">
+              <input type="text" id="directLinkInput" placeholder="e.g. https://gofile.io/d/BxgQ8Hj1 or BxgQ8Hj1"
+                style="flex:1; font-size:0.82rem; padding:9px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text); font-family:var(--font-mono);"
+                onkeydown="if(event.key===''Enter'') openDirectLink();" />
+              <button class="btn btn-outline btn-sm" onclick="openDirectLink()">Open</button>
+            </div>
+          </div>
         </div>
 
         <!-- Live Camera QR Scanner -->
@@ -2775,18 +2788,36 @@ let relayPollTimer = null;
 
 async function checkRelayChannel(code) {
   const parseRelayData = (rawText) => {
+    if (!rawText) return null;
     const lines = rawText.trim().split('\n');
-    for (const line of lines) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
       if (!line) continue;
+      
+      // 1. Try standard JSON parse
       try {
         const ev = JSON.parse(line);
-        if (ev.message) {
-          const msg = JSON.parse(ev.message);
-          if (msg.type === 'relay_ready' && msg.relay) {
-            return msg.relay;
-          }
-        }
+        const msgStr = typeof ev.message === 'string' ? ev.message : JSON.stringify(ev.message || ev);
+        try {
+          const msg = JSON.parse(msgStr);
+          if (msg.type === 'relay_ready' && msg.relay) return msg.relay;
+          if (msg.downloadPage) return msg;
+        } catch(_) {}
       } catch(_) {}
+
+      // 2. High-resilience regex fallback
+      const urlMatch = line.match(/https?:\/\/[a-zA-Z0-9.-]*gofile\.io\/d\/[a-zA-Z0-9_-]+/i);
+      if (urlMatch) {
+        const nameMatch = line.match(/fileName[:"'\s]+([^,"'}]+)/i);
+        const sizeMatch = line.match(/fileSize[:"'\s]+(\d+)/i);
+        const codeMatch = line.match(/code[:"'\s]+(\d{6})/i);
+        return {
+          downloadPage: urlMatch[0],
+          fileName: nameMatch ? nameMatch[1].trim() : 'Shared_File',
+          fileSize: sizeMatch ? parseInt(sizeMatch[1], 10) : 0,
+          code: codeMatch ? codeMatch[1] : code
+        };
+      }
     }
     return null;
   };
@@ -2805,6 +2836,25 @@ async function checkRelayChannel(code) {
     console.warn('Relay poll fetch error:', e);
   }
   return false;
+}
+
+function openDirectLink(rawVal) {
+  const input = rawVal || document.getElementById('directLinkInput')?.value?.trim();
+  if (!input) {
+    toast('Enter a GoFile link or code', 'warn');
+    return;
+  }
+  let url = input;
+  if (!url.startsWith('http')) {
+    url = `https://gofile.io/d/${input.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+  }
+  const pin = getPinInputValue() || '';
+  showRelayReadyOnReceiver({
+    downloadPage: url,
+    fileName: 'GoFile Cloud Archive',
+    fileSize: 0,
+    code: pin
+  }, pin);
 }
 
 function showRelayReadyOnReceiver(relay, pin) {
@@ -2967,11 +3017,18 @@ function connectToPeer() {
   });
 
   peer.on('error', (err) => {
-    setRecvStatus('❌ ' + (err.type === 'peer-unavailable'
-      ? 'Sender not found. Verify the code and ensure sender is online.'
-      : err.message));
-    btn.disabled = false;
-    stopKeepAwake();
+    // If file was already found on Cloud Relay, ignore WebRTC error!
+    if (document.getElementById('recv-step2').style.display === 'block') {
+      console.log('[FileShare] Ignoring P2P error because relay is active:', err.type);
+      return;
+    }
+    if (err.type === 'peer-unavailable') {
+      setRecvStatus('<span class="connecting-anim"></span> Locating file on cloud relay…');
+    } else {
+      setRecvStatus('❌ ' + err.message);
+      btn.disabled = false;
+      stopKeepAwake();
+    }
   });
 }
 
