@@ -1813,11 +1813,16 @@ const MY_DEVICE = getDeviceInfo();
 // ══════════════════════════════════════════════════════
 let wakeLock       = null;
 let keepAwakeTimer = null;
+let silentAudioEl  = null;
 let audioCtx       = null;
+let isBgEngineActive = false;
+
+// 44-byte valid PCM silent WAV loop
+const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 async function requestWakeLock() {
   try {
-    if ('wakeLock' in navigator && !wakeLock) {
+    if ('wakeLock' in navigator && !wakeLock && document.visibilityState === 'visible') {
       wakeLock = await navigator.wakeLock.request('screen');
       wakeLock.addEventListener('release', () => { wakeLock = null; });
     }
@@ -1831,31 +1836,54 @@ function releaseWakeLock() {
   }
 }
 
-function startSilentAudio() {
+function startSilentAudio(taskTitle = 'High-Speed Background Transfer') {
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!audioCtx && AudioContext) {
-      audioCtx = new AudioContext();
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0.00001;
-      const osc = audioCtx.createOscillator();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
+    if (!silentAudioEl) {
+      silentAudioEl = new Audio(SILENT_WAV);
+      silentAudioEl.loop = true;
+      silentAudioEl.volume = 0.001; // Silent to ear, but registers as active media service in Android/iOS
+      silentAudioEl.playsInline = true;
     }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
+    silentAudioEl.play().catch(() => {});
+
+    // Register Android/iOS MediaSession foreground service
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: taskTitle.startsWith('📥') ? taskTitle : `📥 ${taskTitle}`,
+        artist: 'FileShare Background Transfer',
+        album: 'Active Keep-Alive (Safe to minimize or lock screen)'
+      });
+      navigator.mediaSession.playbackState = 'playing';
+      navigator.mediaSession.setActionHandler('play', () => silentAudioEl?.play());
+      navigator.mediaSession.setActionHandler('pause', () => {});
     }
   } catch (_) {}
 }
 
 function stopSilentAudio() {
   try {
-    if (audioCtx) {
-      audioCtx.close();
-      audioCtx = null;
+    if (silentAudioEl) {
+      silentAudioEl.pause();
+      silentAudioEl.currentTime = 0;
+    }
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'none';
     }
   } catch (_) {}
+}
+
+function notifyTransferComplete(fileName = 'File') {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Download Complete! 🎉', {
+        body: `${fileName} is ready.`,
+        icon: 'https://madjerk3128.github.io/File-Share/favicon.ico'
+      });
+    }
+    if (navigator.vibrate) {
+      navigator.vibrate([150, 70, 150, 70, 300]);
+    }
+  } catch(_) {}
 }
 
 function playScanChime() {
@@ -1877,16 +1905,26 @@ function playScanChime() {
   } catch (_) {}
 }
 
-function startKeepAwake() {
+function startKeepAwake(taskTitle = 'High-Speed Transfer') {
+  isBgEngineActive = true;
   stopKeepAwake();
+  isBgEngineActive = true;
   requestWakeLock();
-  startSilentAudio();
+  startSilentAudio(taskTitle);
+
+  // Request notifications on mobile if default
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { Notification.requestPermission(); } catch(_) {}
+  }
 
   keepAwakeTimer = setInterval(() => {
+    if (!isBgEngineActive) return;
     requestWakeLock();
-    startSilentAudio();
+    if (silentAudioEl && silentAudioEl.paused) {
+      silentAudioEl.play().catch(() => {});
+    }
 
-    if (shareConns.length > 0) {
+    if (typeof shareConns !== 'undefined' && shareConns.length > 0) {
       shareConns.forEach(conn => {
         if (conn && conn.open) {
           try { conn.send({ type: 'ping' }); } catch (_) {}
@@ -1894,13 +1932,14 @@ function startKeepAwake() {
       });
     }
 
-    if (recvConn && recvConn.open) {
+    if (typeof recvConn !== 'undefined' && recvConn && recvConn.open) {
       try { recvConn.send({ type: 'ping' }); } catch (_) {}
     }
-  }, 25000);
+  }, 4000);
 }
 
 function stopKeepAwake() {
+  isBgEngineActive = false;
   if (keepAwakeTimer) {
     clearInterval(keepAwakeTimer);
     keepAwakeTimer = null;
@@ -1910,9 +1949,11 @@ function stopKeepAwake() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
+  if (document.visibilityState === 'visible' && isBgEngineActive) {
     requestWakeLock();
-    startSilentAudio();
+    if (silentAudioEl && silentAudioEl.paused) {
+      silentAudioEl.play().catch(() => {});
+    }
   }
 });
 
@@ -2894,6 +2935,7 @@ function openDirectLink(rawVal) {
 function showRelayReadyOnReceiver(relay, pin) {
   if (relayPollTimer) { clearInterval(relayPollTimer); relayPollTimer = null; }
   receivedRelayMeta = relay;
+  startKeepAwake(`Downloading: ${relay.fileName || 'File'}`);
 
   document.getElementById('recv-step1').style.display = 'none';
   document.getElementById('recv-step2').style.display = 'block';
@@ -2931,6 +2973,10 @@ function showRelayReadyOnReceiver(relay, pin) {
               <div class="fi-meta" style="margin-top:4px;">
                 🔒 AES-256-GCM Encrypted · Size: <strong>${formatBytes(relay.fileSize)}</strong> · Password: <strong style="color:var(--accent); font-family:var(--font-mono); font-size:1.05rem;">${pin}</strong>
               </div>
+              <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:#22c55e; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); border-radius:100px; padding:3px 10px; font-weight:500;">
+                <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#22c55e;"></span>
+                <span>Background Download Active (Locks & minimizes safely)</span>
+              </div>
             </div>
           </div>
           <div class="fi-right">
@@ -2939,8 +2985,8 @@ function showRelayReadyOnReceiver(relay, pin) {
         </div>
         <div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--bg-elevated); font-size:0.84rem; color:var(--text-secondary); line-height:1.5; border:1px solid var(--border);">
           💡 <strong>How to download & decrypt:</strong><br>
-          1. Tap <strong>⬇ Download</strong> above to open the secure GoFile page.<br>
-          2. When prompted on GoFile, enter password <strong>${pin}</strong> and download the <code>.enc</code> file.<br>
+          1. Tap <strong>⬇ Download</strong> above to start downloading via your phone's native background download manager.<br>
+          2. When prompted on GoFile, enter password <strong>${pin}</strong> and save the <code>.enc</code> file.<br>
           3. Switch to the <strong>"🔓 Decrypt .enc File"</strong> tab above, select the downloaded file, and tap <strong>Decrypt</strong> to restore your original file!
         </div>
       </div>
@@ -3103,6 +3149,8 @@ function hideSenderCard() {
 }
 
 function onStart(data) {
+  const fName = recvFiles[data.index]?.name || 'File';
+  startKeepAwake(`Downloading: ${fName}`);
   recvBufs[data.index] = {
     chunks: [], total: data.total, received: 0,
     startTime: Date.now(), lastTime: Date.now(), lastBytes: 0, bps: 0,
@@ -3131,14 +3179,16 @@ function onDone(data) {
   if (!b) return;
   const elapsed = (Date.now() - b.startTime) / 1000;
   const avgSpeed = elapsed > 0 ? b.total / elapsed : 0;
+  const fileName = recvFiles[data.index]?.name || 'file';
 
   const mime = recvFiles[data.index]?.type || 'application/octet-stream';
-  triggerDownload(new Blob(b.chunks, { type: mime }), recvFiles[data.index]?.name || 'file');
+  triggerDownload(new Blob(b.chunks, { type: mime }), fileName);
 
   delete recvBufs[data.index];
   showProgBar(data.index, false);
   resetDlBtn(data.index);
-  toast(`Downloaded ${recvFiles[data.index]?.name} (${formatSpeed(avgSpeed)})`, 'success');
+  notifyTransferComplete(fileName);
+  toast(`Downloaded ${fileName} (${formatSpeed(avgSpeed)})`, 'success');
 }
 
 function updateProgBar(idx, received, total, bps) {
