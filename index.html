@@ -1296,6 +1296,24 @@
 <!-- ══════════════ MAIN CONTENT ══════════════ -->
 <div class="app-container">
 
+  <!-- Android Chrome Switcher Banner for Background Downloads -->
+  <div id="chromePromptBanner" style="display:none; margin:0 0 20px 0; padding:14px 18px; border-radius:14px; background:linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(59, 130, 246, 0.06)); border:1px solid rgba(59, 130, 246, 0.35); color:var(--text);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:1.6rem;">🚀</span>
+        <div>
+          <div style="font-weight:700; font-size:0.92rem; color:var(--text);">Switch to Google Chrome for Background Downloads</div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
+            Brave freezes tabs when minimized. Tap to open in Google Chrome for true background downloads like BGMI.
+          </div>
+        </div>
+      </div>
+      <button onclick="openInGoogleChrome()" class="btn btn-primary btn-sm" style="padding:8px 18px; font-weight:700; border-radius:8px; white-space:nowrap; background:#2563eb; color:#fff; border:none; cursor:pointer;">
+        Open in Chrome →
+      </button>
+    </div>
+  </div>
+
   <!-- ══════════════ PAGE: HOME ══════════════ -->
   <div class="page active" id="page-home">
     <div class="hero">
@@ -1804,6 +1822,29 @@ function getDeviceInfo() {
 
   return { name: os, browser, icon, label: `${os} · ${browser}` };
 }
+
+function openInGoogleChrome() {
+  const currentUrl = window.location.href;
+  const rawUrl = currentUrl.replace(/^https?:\/\//, '');
+  const intentUrl = `intent://${rawUrl}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+  window.location.href = intentUrl;
+}
+
+function checkNonChromeAndroid() {
+  try {
+    const ua = navigator.userAgent || '';
+    const isAndroid = /Android/i.test(ua);
+    const isBrave = (navigator.brave && typeof navigator.brave.isBrave === 'function') || /Brave/i.test(ua);
+    const isSamsung = /SamsungBrowser/i.test(ua);
+    const isOther = /MiuiBrowser|UCBrowser|Opera|OppoBrowser|VivoBrowser/i.test(ua);
+    const banner = document.getElementById('chromePromptBanner');
+    if (banner && isAndroid && (isBrave || isSamsung || isOther || !/Chrome/i.test(ua))) {
+      banner.style.display = 'block';
+    }
+  } catch(_) {}
+}
+window.addEventListener('DOMContentLoaded', checkNonChromeAndroid);
+setTimeout(checkNonChromeAndroid, 500);
 
 const MY_DEVICE = getDeviceInfo();
 
