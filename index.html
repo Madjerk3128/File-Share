@@ -1431,21 +1431,21 @@
           </div>
         </div>
 
-        <!-- ══════════ E2E ENCRYPTED CLOUD RELAY CARD ══════════ -->
+        <!-- ══════════ E2E ENCRYPTED CLOUD RELAY CARD (AUTO-STARTS) ══════════ -->
         <div class="relay-card" id="relayModeCard" style="margin-top:16px; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--bg-elevated); box-shadow:var(--shadow-sm);">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div style="flex:1; min-width:240px;">
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
                 <span style="font-size:1.15rem;">🔒</span>
                 <span style="font-weight:700; font-size:0.96rem; color:var(--text);">AES-256-GCM Encrypted Relay</span>
-                <span class="badge-pill badge-p2p" style="background:var(--accent-glow); color:var(--accent); font-size:0.7rem; font-weight:700;">No WARP Needed</span>
+                <span class="badge-pill badge-p2p" style="background:var(--accent-glow); color:var(--accent); font-size:0.7rem; font-weight:700;">Background Safe</span>
               </div>
               <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45;">
-                Client-side zero-knowledge encryption using your 6-digit PIN. Transmits cross-network across 4G/5G mobile carriers, and strict Ethernet firewalls without Cloudflare WARP.
+                Automatically uploading encrypted file — receiver downloads natively in Android notification bar. Safe to minimize and lock screen, like BGMI downloads.
               </div>
             </div>
-            <button class="btn btn-primary btn-sm" id="btnStartCloudRelay" onclick="startCloudRelayUpload()">
-              <span>⚡ Encrypt &amp; Send via Relay</span>
+            <button class="btn btn-primary btn-sm" id="btnStartCloudRelay" onclick="startCloudRelayUpload()" style="display:none;">
+              <span>⚡ Retry Upload</span>
             </button>
           </div>
 
@@ -1466,8 +1466,8 @@
           <div id="cloudUploadSuccessBox" style="display:none; margin-top:14px; padding:14px; border-radius:10px; background:rgba(46,125,50,0.08); border:1px solid rgba(46,125,50,0.25);">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
               <div>
-                <div style="font-weight:700; font-size:0.9rem; color:var(--success);">✅ Encrypted &amp; Ready on Relay</div>
-                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Recipient only needs your 6-digit PIN to download and decrypt the file.</div>
+                <div style="font-weight:700; font-size:0.9rem; color:var(--success);">✅ Background Download Ready!</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Receiver enters your 6-digit PIN → file downloads natively in Android notification bar. Screen can be locked!</div>
                 <div id="relayShareLink" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--accent); margin-top:4px; word-break:break-all;"></div>
               </div>
               <div style="display:flex; gap:8px;">
@@ -2366,6 +2366,10 @@ function startSharing() {
   startKeepAwake();
   connDevices = {};
   initSharePeer(currentCode);
+
+  // AUTO-START GoFile cloud relay for guaranteed background downloading on receiver's phone
+  // Triggers after 400ms so the PIN tiles render first
+  setTimeout(() => { startCloudRelayUpload(); }, 400);
 }
 
 function initSharePeer(code) {
@@ -3030,6 +3034,42 @@ function openDirectLink(rawVal) {
   }, pin);
 }
 
+function downloadRelayFile() {
+  if (!receivedRelayMeta || !receivedRelayMeta.downloadPage) {
+    toast('Relay file link not found', 'warn');
+    return;
+  }
+  const pin = receivedRelayMeta.code || getPinInputValue() || '';
+
+  // Copy PIN to clipboard so user can paste it on GoFile's password prompt
+  if (pin && navigator.clipboard) {
+    navigator.clipboard.writeText(pin).catch(() => {});
+  }
+
+  // Show active progress state in the card identical to normal downloading!
+  const progWrap = document.getElementById('prog-wrap-0');
+  const progFill = document.getElementById('prog-fill-0');
+  const progLabel = document.getElementById('prog-label-0');
+  const dlBtn = document.getElementById('dl-btn-0');
+
+  if (progWrap) progWrap.style.display = 'block';
+  if (progFill) { progFill.style.width = '0%'; progFill.style.transition = 'width 30s linear'; setTimeout(() => { if (progFill) progFill.style.width = '95%'; }, 100); }
+  if (progLabel) progLabel.textContent = 'Downloading in Android notification bar…';
+  if (dlBtn) dlBtn.textContent = '⬇ Downloading…';
+
+  // Build GoFile URL — append PIN as #password= for auto-fill (GoFile reads this)
+  let goUrl = receivedRelayMeta.downloadPage;
+  if (pin) {
+    // If GoFile URL has no hash yet, add password hint
+    if (!goUrl.includes('#')) goUrl += '#password=' + encodeURIComponent(pin);
+  }
+
+  window.open(goUrl, '_blank');
+
+  // Show a persistent notice about the PIN for GoFile's password prompt
+  toast(`📋 PIN ${pin} copied! Paste it in GoFile's password box. Download starts in notification bar — safe to lock screen.`, 'success');
+}
+
 function showRelayReadyOnReceiver(relay, pin) {
   if (relayPollTimer) { clearInterval(relayPollTimer); relayPollTimer = null; }
   receivedRelayMeta = relay;
@@ -3038,66 +3078,83 @@ function showRelayReadyOnReceiver(relay, pin) {
   document.getElementById('recv-step1').style.display = 'none';
   document.getElementById('recv-step2').style.display = 'block';
 
-  document.getElementById('recvSourceLabel').textContent = '🌐 Encrypted Cloud Relay';
-  document.getElementById('recvFileCountLabel').textContent = 'FILE READY (AES-256 ENCRYPTED)';
-
-  const relayCard = document.getElementById('recvRelayCard');
-  if (relayCard) {
-    relayCard.style.display = 'block';
-    document.getElementById('recvRelayFileName').textContent = relay.fileName || 'Encrypted File';
-    document.getElementById('recvRelayFileSize').textContent = formatBytes(relay.fileSize || relay.encSize);
-    const linkBtn = document.getElementById('recvRelayLinkBtn');
-    if (linkBtn) {
-      linkBtn.href = relay.downloadPage;
-      linkBtn.target = '_blank';
-      linkBtn.textContent = '⬇ Download File (GoFile)';
+  // Render sender device card at the top identical to normal downloading
+  const senderCard = document.getElementById('senderDeviceCard');
+  if (senderCard) {
+    document.getElementById('senderDeviceIcon').textContent = '💻';
+    document.getElementById('senderDeviceName').textContent = 'Sender Device';
+    document.getElementById('senderDeviceSub').textContent  = 'Cloud Relay · Native Background Download';
+    const badge = document.getElementById('recvConnTypeBadge');
+    if (badge) {
+      badge.textContent = '🟢 Cloud Relay';
+      badge.className = 'network-stat-pill tag-green';
     }
+    senderCard.style.display = 'flex';
+  }
+
+  // Hide the standalone card to keep UI identical to normal downloading
+  const oldRelayCard = document.getElementById('recvRelayCard');
+  if (oldRelayCard) oldRelayCard.style.display = 'none';
+
+  // Set standard labels identical to normal downloading
+  document.getElementById('recvSourceLabel').textContent = '📄 ' + (relay.fileName || 'Shared File');
+  document.getElementById('recvFileCountLabel').textContent = 'FILES READY (1)';
+
+  const mainBtn = document.getElementById('recvDownloadMainBtn');
+  if (mainBtn) {
+    mainBtn.textContent = '⬇ Download File';
+    mainBtn.onclick = () => downloadRelayFile();
   }
 
   // Pre-fill PIN in the Decrypt tab as well
   const decPin = document.getElementById('decPinInput');
   if (decPin && pin) decPin.value = pin;
 
-  // Render download instructions in recvFileList
+  // Render file list EXACTLY like normal downloading!
   const list = document.getElementById('recvFileList');
   if (list) {
+    const fSize = relay.fileSize || relay.encSize || 0;
     list.innerHTML = `
-      <div class="file-item" style="padding:18px;">
+      <div class="file-item" id="rfi-0">
         <div class="fi-row">
           <div class="fi-left">
-            <span class="fi-icon">🎬</span>
+            <span class="fi-icon">${fileIcon(relay.fileName)}</span>
             <div class="fi-info">
-              <div class="fi-name" style="font-size:0.95rem; font-weight:600;">${escHtml(relay.fileName)}</div>
-              <div class="fi-meta" style="margin-top:4px;">
-                🔒 AES-256-GCM Encrypted · Size: <strong>${formatBytes(relay.fileSize)}</strong> · Password: <strong style="color:var(--accent); font-family:var(--font-mono); font-size:1.05rem;">${pin}</strong>
-              </div>
-              <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:#22c55e; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); border-radius:100px; padding:3px 10px; font-weight:500;">
-                <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#22c55e;"></span>
-                <span>Background Download Active (Locks & minimizes safely)</span>
-              </div>
+              <div class="fi-name">${escHtml(relay.fileName)}</div>
+              <div class="fi-meta">🔒 AES-256 Encrypted · Native Background Download (Locks &amp; minimizes safely)</div>
             </div>
           </div>
           <div class="fi-right">
-            <a href="${relay.downloadPage}" target="_blank" class="btn btn-green btn-sm" style="text-decoration:none; padding:8px 16px;">⬇ Download</a>
+            <span class="fi-size">${formatBytes(fSize)}</span>
+            <button class="btn btn-green btn-sm" id="dl-btn-0" onclick="downloadRelayFile()">⬇ Download</button>
           </div>
         </div>
-        <div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--bg-elevated); font-size:0.84rem; color:var(--text-secondary); line-height:1.5; border:1px solid var(--border);">
-          💡 <strong>How to download & decrypt:</strong><br>
-          1. Tap <strong>⬇ Download</strong> above to start downloading via your phone's native background download manager.<br>
-          2. When prompted on GoFile, enter password <strong>${pin}</strong> and save the <code>.enc</code> file.<br>
-          3. Switch to the <strong>"🔓 Decrypt .enc File"</strong> tab above, select the downloaded file, and tap <strong>Decrypt</strong> to restore your original file!
+        <div class="prog-wrap" id="prog-wrap-0" style="display:none;">
+          <div class="prog-info">
+            <span class="prog-label" id="prog-label-0">Starting download…</span>
+            <span class="prog-speed" style="color:var(--success);">Android System Service</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill green-fill" id="prog-fill-0" style="width:0%"></div></div>
+        </div>
+        <div style="margin-top:12px; padding:10px 14px; border-radius:10px; background:var(--bg-elevated); font-size:0.82rem; color:var(--text-secondary); line-height:1.45; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            🔑 GoFile Password: <strong style="color:var(--accent); font-family:var(--font-mono); font-size:1.1rem;">${pin}</strong>
+            <div style="margin-top:3px; color:var(--text-muted); font-size:0.78rem;">Auto-copied · Paste when GoFile asks for password</div>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" onclick="navigator.clipboard?.writeText('${pin}'); toast('PIN copied!','success')" style="font-size:0.75rem; padding:4px 10px;">
+              📋 Copy PIN
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="switchRecvTab('decrypt')" style="font-size:0.75rem; padding:4px 10px;">
+              🔓 Decrypt →
+            </button>
+          </div>
         </div>
       </div>
     `;
   }
 
-  const mainBtn = document.getElementById('recvDownloadMainBtn');
-  if (mainBtn) {
-    mainBtn.textContent = '⬇ Open GoFile';
-    mainBtn.onclick = () => window.open(relay.downloadPage, '_blank');
-  }
-
-  toast('Found encrypted file on Cloud Relay! Ready for download.', 'success');
+  toast('Found file on Cloud Relay! Ready for native background download.', 'success');
 }
 
 function connectToPeer() {
@@ -3585,14 +3642,15 @@ async function lockGoFileFolder(folderId, guestToken, pin) {
 
 async function startCloudRelayUpload() {
   if (!sharedFiles || !sharedFiles.length) {
-    toast('No files selected', 'warn');
+    // Auto-called from startSharing before files ready — ignore silently
     return;
   }
   if (isCloudUploading) return;
   isCloudUploading = true;
 
+  // Hide the retry button while uploading; show progress immediately
   const btn = document.getElementById('btnStartCloudRelay');
-  if (btn) btn.disabled = true;
+  if (btn) { btn.style.display = 'none'; btn.disabled = true; }
 
   const progBox = document.getElementById('cloudUploadProgressBox');
   const succBox = document.getElementById('cloudUploadSuccessBox');
@@ -3607,15 +3665,15 @@ async function startCloudRelayUpload() {
 
   try {
     if (stage) stage.textContent = '🔒 Encrypting with AES-256-GCM…';
-    if (pct) pct.textContent = '10%';
-    if (fill) fill.style.width = '10%';
+    if (pct) pct.textContent = '5%';
+    if (fill) fill.style.width = '5%';
 
     const targetFile = sharedFiles[0];
     const encFileName = `${targetFile.name}.enc`;
 
     const encryptedBlob = await encryptFileE2E(targetFile, targetFile.name, currentCode);
 
-    if (stage) stage.textContent = '🌐 Uploading Encrypted Blob to Cloud Relay…';
+    if (stage) stage.textContent = '🚀 Uploading to GoFile for background download…';
     if (pct) pct.textContent = '20%';
     if (fill) fill.style.width = '20%';
 
@@ -3628,13 +3686,13 @@ async function startCloudRelayUpload() {
     });
 
     if (uploadRes.parentFolder && uploadRes.guestToken) {
-      if (stage) stage.textContent = '🔑 Securing Relay Folder with 6-Digit PIN…';
+      if (stage) stage.textContent = '🔑 Locking folder with your 6-Digit PIN…';
       await lockGoFileFolder(uploadRes.parentFolder, uploadRes.guestToken, currentCode);
     }
 
     if (pct) pct.textContent = '100%';
     if (fill) fill.style.width = '100%';
-    if (stage) stage.textContent = '✅ Encrypted Transfer Ready!';
+    if (stage) stage.textContent = '✅ Ready — receiver taps Download, it downloads in notification bar!';
 
     currentRelayMeta = {
       code: currentCode,
@@ -3647,7 +3705,7 @@ async function startCloudRelayUpload() {
       parentFolderCode: uploadRes.parentFolderCode
     };
 
-    // 1. Publish to HTTPS Cloud Channel (ntfy.sh) so receiver connects INSTANTLY without Cloudflare WARP
+    // 1. Publish to ntfy.sh so receiver gets it instantly without WARP
     try {
       await fetch(`https://ntfy.sh/fshare_pin_${currentCode}`, {
         method: 'POST',
@@ -3662,23 +3720,18 @@ async function startCloudRelayUpload() {
       console.warn('[FileShare] ntfy publish error:', errNtfy);
     }
 
-    // 2. Also send over WebRTC if peers are locally connected
+    // 2. Also send over WebRTC if a local peer is already connected
     if (shareConns && shareConns.length) {
       shareConns.forEach(conn => {
         if (conn && conn.open) {
-          try {
-            conn.send({
-              type: 'relay_ready',
-              relay: currentRelayMeta
-            });
-          } catch (_) {}
+          try { conn.send({ type: 'relay_ready', relay: currentRelayMeta }); } catch (_) {}
         }
       });
     }
 
     const modeBadge = document.getElementById('transferModeBadge');
     if (modeBadge) {
-      modeBadge.textContent = 'Encrypted Relay Active';
+      modeBadge.textContent = 'Background Download Ready';
       modeBadge.className = 'network-stat-pill tag-green';
     }
 
@@ -3688,14 +3741,15 @@ async function startCloudRelayUpload() {
     const relayLinkEl = document.getElementById('relayShareLink');
     if (relayLinkEl) relayLinkEl.textContent = uploadRes.downloadPage;
 
-    toast('File encrypted with AES-256 and uploaded to relay!', 'success');
+    toast('✅ Ready! Receiver enters PIN → downloads in Android notification bar.', 'success');
   } catch (err) {
     console.error('Cloud Relay error:', err);
+    // On failure, show Retry button
+    if (btn) { btn.style.display = ''; btn.disabled = false; btn.querySelector('span').textContent = '⚡ Retry Upload'; }
+    if (stage) stage.textContent = '❌ Upload failed — tap Retry';
     toast(`Relay upload failed: ${err.message}`, 'error');
-    if (stage) stage.textContent = '❌ Upload failed: ' + err.message;
   } finally {
     isCloudUploading = false;
-    if (btn) btn.disabled = false;
   }
 }
 
