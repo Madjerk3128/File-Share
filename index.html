@@ -1816,9 +1816,58 @@ let keepAwakeTimer = null;
 let silentAudioEl  = null;
 let audioCtx       = null;
 let isBgEngineActive = false;
+let bgWorker       = null;
 
 // 44-byte valid PCM silent WAV loop
 const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
+// Initialize background Web Worker ticker to bypass Chromium background throttling
+try {
+  const workerBlob = new Blob([`
+    let t = null;
+    self.onmessage = function(e) {
+      if (e.data === 'start') {
+        if (!t) t = setInterval(() => self.postMessage('tick'), 1000);
+      } else if (e.data === 'stop') {
+        clearInterval(t);
+        t = null;
+      }
+    };
+  `], { type: 'application/javascript' });
+  bgWorker = new Worker(URL.createObjectURL(workerBlob));
+  bgWorker.onmessage = function() {
+    if (!isBgEngineActive) return;
+    if (silentAudioEl && silentAudioEl.paused) {
+      silentAudioEl.play().catch(() => {});
+    }
+    if (typeof shareConns !== 'undefined' && shareConns.length > 0) {
+      shareConns.forEach(conn => {
+        if (conn && conn.open) {
+          try { conn.send({ type: 'ping' }); } catch (_) {}
+        }
+      });
+    }
+    if (typeof recvConn !== 'undefined' && recvConn && recvConn.open) {
+      try { recvConn.send({ type: 'ping' }); } catch (_) {}
+    }
+  };
+} catch(_) {}
+
+// Arm background audio on the very first user interaction (bypasses mobile autoplay blocks)
+function armBackgroundAudio() {
+  if (!silentAudioEl) {
+    silentAudioEl = new Audio(SILENT_WAV);
+    silentAudioEl.loop = true;
+    silentAudioEl.volume = 0.001;
+    silentAudioEl.playsInline = true;
+  }
+  if (silentAudioEl.paused) {
+    silentAudioEl.play().catch(() => {});
+  }
+}
+window.addEventListener('pointerdown', armBackgroundAudio, { passive: true });
+window.addEventListener('touchstart', armBackgroundAudio, { passive: true });
+window.addEventListener('click', armBackgroundAudio, { passive: true });
 
 async function requestWakeLock() {
   try {
@@ -1837,17 +1886,11 @@ function releaseWakeLock() {
 }
 
 function startSilentAudio(taskTitle = 'High-Speed Background Transfer') {
-  try {
-    if (!silentAudioEl) {
-      silentAudioEl = new Audio(SILENT_WAV);
-      silentAudioEl.loop = true;
-      silentAudioEl.volume = 0.001; // Silent to ear, but registers as active media service in Android/iOS
-      silentAudioEl.playsInline = true;
-    }
-    silentAudioEl.play().catch(() => {});
+  armBackgroundAudio();
 
-    // Register Android/iOS MediaSession foreground service
-    if ('mediaSession' in navigator) {
+  // Register Android/iOS MediaSession foreground service
+  if ('mediaSession' in navigator) {
+    try {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: taskTitle.startsWith('📥') ? taskTitle : `📥 ${taskTitle}`,
         artist: 'FileShare Background Transfer',
@@ -1856,8 +1899,8 @@ function startSilentAudio(taskTitle = 'High-Speed Background Transfer') {
       navigator.mediaSession.playbackState = 'playing';
       navigator.mediaSession.setActionHandler('play', () => silentAudioEl?.play());
       navigator.mediaSession.setActionHandler('pause', () => {});
-    }
-  } catch (_) {}
+    } catch (_) {}
+  }
 }
 
 function stopSilentAudio() {
@@ -1911,6 +1954,7 @@ function startKeepAwake(taskTitle = 'High-Speed Transfer') {
   isBgEngineActive = true;
   requestWakeLock();
   startSilentAudio(taskTitle);
+  bgWorker?.postMessage('start');
 
   // Request notifications on mobile if default
   if ('Notification' in window && Notification.permission === 'default') {
@@ -1935,11 +1979,12 @@ function startKeepAwake(taskTitle = 'High-Speed Transfer') {
     if (typeof recvConn !== 'undefined' && recvConn && recvConn.open) {
       try { recvConn.send({ type: 'ping' }); } catch (_) {}
     }
-  }, 4000);
+  }, 3000);
 }
 
 function stopKeepAwake() {
   isBgEngineActive = false;
+  bgWorker?.postMessage('stop');
   if (keepAwakeTimer) {
     clearInterval(keepAwakeTimer);
     keepAwakeTimer = null;
@@ -2504,11 +2549,23 @@ async function sendFile(conn, idx) {
 
 function waitForDrain(dc) {
   return new Promise(resolve => {
-    const poll = () => {
-      if (!dc || dc.bufferedAmount <= LOW_WATER) resolve();
-      else setTimeout(poll, 3);
+    if (!dc || dc.bufferedAmount <= LOW_WATER) return resolve();
+    let resolved = false;
+    const done = () => {
+      if (resolved) return;
+      resolved = true;
+      try { dc.removeEventListener('bufferedamountlow', done); } catch(_) {}
+      resolve();
     };
-    poll();
+    try {
+      dc.bufferedAmountLowThreshold = LOW_WATER;
+      dc.addEventListener('bufferedamountlow', done, { once: true });
+    } catch(_) {}
+    const poll = () => {
+      if (!dc || dc.bufferedAmount <= LOW_WATER) done();
+      else if (!resolved) setTimeout(poll, 10);
+    };
+    setTimeout(poll, 10);
   });
 }
 
