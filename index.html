@@ -2598,20 +2598,6 @@ async function openQrScanner() {
   readerDiv.innerHTML = '';
 
   try {
-    const cameras = await Html5Qrcode.getCameras();
-    const select = document.getElementById('cameraSelect');
-    select.innerHTML = '';
-
-    if (cameras && cameras.length) {
-      cameras.forEach((cam, i) => {
-        const opt = document.createElement('option');
-        opt.value = cam.id;
-        opt.textContent = cam.label || `Camera ${i + 1}`;
-        select.appendChild(opt);
-      });
-      select.style.display = cameras.length > 1 ? 'inline-block' : 'none';
-    }
-
     html5QrScanner = new Html5Qrcode("qrReader");
 
     const config = {
@@ -2620,10 +2606,9 @@ async function openQrScanner() {
       aspectRatio: 1.0,
     };
 
-    const cameraIdOrConfig = cameras && cameras.length ? { facingMode: "environment" } : true;
-
+    // Request back camera directly — this reliably triggers the browser's native camera permission prompt
     await html5QrScanner.start(
-      cameraIdOrConfig,
+      { facingMode: "environment" },
       config,
       (decodedText) => {
         const code = extractCodeFromQr(decodedText);
@@ -2632,7 +2617,7 @@ async function openQrScanner() {
           try { navigator.vibrate?.([60, 40, 60]); } catch (_) {}
           closeQrScanner();
           setPinInputValue(code);
-          toast(`Scanned code ${code}! Connecting…`, 'success');
+          toast(`Scanned PIN ${code}! Connecting…`, 'success');
           connectToPeer();
         } else {
           toast('Not a valid FileShare QR code', 'warn');
@@ -2642,9 +2627,26 @@ async function openQrScanner() {
     );
 
     checkTorchSupport();
+
+    // Populate camera selector in background if multiple cameras exist
+    try {
+      const cameras = await Html5Qrcode.getCameras();
+      const select = document.getElementById('cameraSelect');
+      if (select && cameras && cameras.length > 1) {
+        select.innerHTML = '';
+        cameras.forEach((cam, i) => {
+          const opt = document.createElement('option');
+          opt.value = cam.id;
+          opt.textContent = cam.label || `Camera ${i + 1}`;
+          select.appendChild(opt);
+        });
+        select.style.display = 'inline-block';
+      }
+    } catch (_) {}
+
   } catch (err) {
     console.warn('Camera start error:', err);
-    toast('Camera access unavailable. Enter 6-digit PIN manually.', 'warn');
+    toast('Camera permission required. Please allow camera access in your browser settings or enter the 6-digit PIN.', 'warn', 5000);
     closeQrScanner();
   }
 }
@@ -2769,6 +2771,107 @@ function setPinInputValue(code) {
   }
 }
 
+let relayPollTimer = null;
+
+async function checkRelayChannel(code) {
+  const parseRelayData = (rawText) => {
+    const lines = rawText.trim().split('\n');
+    for (const line of lines) {
+      if (!line) continue;
+      try {
+        const ev = JSON.parse(line);
+        if (ev.message) {
+          const msg = JSON.parse(ev.message);
+          if (msg.type === 'relay_ready' && msg.relay) {
+            return msg.relay;
+          }
+        }
+      } catch(_) {}
+    }
+    return null;
+  };
+
+  try {
+    const resp = await fetch(`https://ntfy.sh/fshare_pin_${code}/json?poll=1`);
+    if (resp.ok) {
+      const text = await resp.text();
+      const relay = parseRelayData(text);
+      if (relay) {
+        showRelayReadyOnReceiver(relay, code);
+        return true;
+      }
+    }
+  } catch(e) {
+    console.warn('Relay poll fetch error:', e);
+  }
+  return false;
+}
+
+function showRelayReadyOnReceiver(relay, pin) {
+  if (relayPollTimer) { clearInterval(relayPollTimer); relayPollTimer = null; }
+  receivedRelayMeta = relay;
+
+  document.getElementById('recv-step1').style.display = 'none';
+  document.getElementById('recv-step2').style.display = 'block';
+
+  document.getElementById('recvSourceLabel').textContent = '🌐 Encrypted Cloud Relay';
+  document.getElementById('recvFileCountLabel').textContent = 'FILE READY (AES-256 ENCRYPTED)';
+
+  const relayCard = document.getElementById('recvRelayCard');
+  if (relayCard) {
+    relayCard.style.display = 'block';
+    document.getElementById('recvRelayFileName').textContent = relay.fileName || 'Encrypted File';
+    document.getElementById('recvRelayFileSize').textContent = formatBytes(relay.fileSize || relay.encSize);
+    const linkBtn = document.getElementById('recvRelayLinkBtn');
+    if (linkBtn) {
+      linkBtn.href = relay.downloadPage;
+      linkBtn.target = '_blank';
+      linkBtn.textContent = '⬇ Download File (GoFile)';
+    }
+  }
+
+  // Pre-fill PIN in the Decrypt tab as well
+  const decPin = document.getElementById('decPinInput');
+  if (decPin && pin) decPin.value = pin;
+
+  // Render download instructions in recvFileList
+  const list = document.getElementById('recvFileList');
+  if (list) {
+    list.innerHTML = `
+      <div class="file-item" style="padding:18px;">
+        <div class="fi-row">
+          <div class="fi-left">
+            <span class="fi-icon">🎬</span>
+            <div class="fi-info">
+              <div class="fi-name" style="font-size:0.95rem; font-weight:600;">${escHtml(relay.fileName)}</div>
+              <div class="fi-meta" style="margin-top:4px;">
+                🔒 AES-256-GCM Encrypted · Size: <strong>${formatBytes(relay.fileSize)}</strong> · Password: <strong style="color:var(--accent); font-family:var(--font-mono); font-size:1.05rem;">${pin}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="fi-right">
+            <a href="${relay.downloadPage}" target="_blank" class="btn btn-green btn-sm" style="text-decoration:none; padding:8px 16px;">⬇ Download</a>
+          </div>
+        </div>
+        <div style="margin-top:14px; padding:12px 14px; border-radius:10px; background:var(--bg-elevated); font-size:0.84rem; color:var(--text-secondary); line-height:1.5; border:1px solid var(--border);">
+          💡 <strong>How to download & decrypt:</strong><br>
+          1. Tap <strong>⬇ Download</strong> above to open the secure GoFile page.<br>
+          2. When prompted on GoFile, enter password <strong>${pin}</strong> and download the <code>.enc</code> file.<br>
+          3. Switch to the <strong>"🔓 Decrypt .enc File"</strong> tab above, select the downloaded file, and tap <strong>Decrypt</strong> to restore your original file!
+        </div>
+      </div>
+    `;
+  }
+
+  const mainBtn = document.getElementById('recvDownloadMainBtn');
+  if (mainBtn) {
+    mainBtn.textContent = '⬇ Open GoFile';
+    mainBtn.onclick = () => window.open(relay.downloadPage, '_blank');
+  }
+
+  toast('Found encrypted file on Cloud Relay! Ready for download.', 'success');
+}
+
 function connectToPeer() {
   closeQrScanner();
   const code = getPinInputValue();
@@ -2779,7 +2882,7 @@ function connectToPeer() {
 
   const btn = document.getElementById('connectBtn');
   btn.disabled = true;
-  setRecvStatus('<span class="connecting-anim"></span> Initializing multi-NAT connection…');
+  setRecvStatus('<span class="connecting-anim"></span> Locating file across networks…');
 
   if (recvPeer) {
     try { recvPeer.destroy(); } catch(_) {}
@@ -2788,13 +2891,22 @@ function connectToPeer() {
 
   startKeepAwake();
 
-  // Create Receiver Peer with explicit Any-Network TURN configuration
+  // Instant HTTPS Check via Cloud Relay Channel (ntfy.sh) - works 100% cross-network without WARP!
+  checkRelayChannel(code).then(found => {
+    if (!found) {
+      if (relayPollTimer) clearInterval(relayPollTimer);
+      relayPollTimer = setInterval(async () => {
+        const ok = await checkRelayChannel(code);
+        if (ok) clearInterval(relayPollTimer);
+      }, 2000);
+    }
+  });
+
+  // Also initialize PeerJS for direct local LAN/Wi-Fi transfers
   const peer = new Peer(undefined, PEER_CONFIG);
   recvPeer = peer;
 
   peer.on('open', () => {
-    setRecvStatus('<span class="connecting-anim"></span> Locating sender across network…');
-
     recvConn = peer.connect('fshare-' + code, {
       reliable: true,
       metadata: { device: MY_DEVICE },
@@ -3288,6 +3400,22 @@ async function startCloudRelayUpload() {
       parentFolderCode: uploadRes.parentFolderCode
     };
 
+    // 1. Publish to HTTPS Cloud Channel (ntfy.sh) so receiver connects INSTANTLY without Cloudflare WARP
+    try {
+      await fetch(`https://ntfy.sh/fshare_pin_${currentCode}`, {
+        method: 'POST',
+        headers: { 'Title': 'FileShare' },
+        body: JSON.stringify({
+          type: 'relay_ready',
+          relay: currentRelayMeta
+        })
+      });
+      console.log('[FileShare] Published relay metadata to ntfy.sh channel fshare_pin_' + currentCode);
+    } catch(errNtfy) {
+      console.warn('[FileShare] ntfy publish error:', errNtfy);
+    }
+
+    // 2. Also send over WebRTC if peers are locally connected
     if (shareConns && shareConns.length) {
       shareConns.forEach(conn => {
         if (conn && conn.open) {
