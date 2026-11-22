@@ -2025,8 +2025,15 @@ async function packageIntoZip(files, zipName, onProgress) {
   const zip = new JSZip();
 
   for (const f of files) {
+    const name = f.name.toLowerCase();
+    if (name === 'desktop.ini' || name === 'thumbs.db' || name === '.ds_store') continue;
+    if (name.startsWith('~$') || name.startsWith('._')) continue;
     const relPath = (f.webkitRelativePath || f.name).replace(/^\/+/, '');
-    zip.file(relPath, f);
+    try {
+      zip.file(relPath, f);
+    } catch (errFile) {
+      console.warn('[FileShare] Skipping locked/system file:', f.name, errFile);
+    }
   }
 
   const blob = await zip.generateAsync({
@@ -2104,14 +2111,27 @@ let intentionalDestroy = false;
 let reconnectDebounce  = null;
 
 async function onFilesSelected(list, isFolder = false, explicitFolderName = '') {
-  const files = Array.from(list);
+  let files = Array.from(list);
   if (!files.length) return;
+
+  // 1. FILTER OUT LOCKED & SYSTEM FILES (desktop.ini, Thumbs.db, .DS_Store, ~$ files)
+  files = files.filter(f => {
+    const name = f.name.toLowerCase();
+    if (name === 'desktop.ini' || name === 'thumbs.db' || name === '.ds_store') return false;
+    if (name.startsWith('~$') || name.startsWith('._')) return false;
+    return true;
+  });
+  if (!files.length) {
+    toast('No readable files selected', 'warn');
+    return;
+  }
 
   const hasRelativePath = files.some(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
   const isFolderImport  = isFolder || hasRelativePath;
+  const totalSize = files.reduce((acc, f) => acc + (f.size || 0), 0);
 
-  // 1 FILE DIRECT RULE: Never zip single files
-  if (files.length === 1 && !isFolderImport) {
+  // RULE A: Single file -> DIRECT (Never zip single files, even if selected via folder)
+  if (files.length === 1) {
     const singleFile = files[0];
     singleFile.isZippedBundle = false;
     sharedFiles = [singleFile];
@@ -2121,7 +2141,17 @@ async function onFilesSelected(list, isFolder = false, explicitFolderName = '') 
     return;
   }
 
-  // MULTIPLE FILES / FOLDER: Package into single ZIP
+  // RULE B: Large files (total > 150MB) -> DIRECT HIGH SPEED (Never zip large files, avoids memory limits!)
+  if (totalSize > 150 * 1024 * 1024) {
+    files.forEach(f => { f.isZippedBundle = false; });
+    sharedFiles = files;
+    originalSource = files;
+    startSharing();
+    toast(`Prepared ${files.length} files (${formatBytes(totalSize)}) — Direct Mode`, 'success');
+    return;
+  }
+
+  // MULTIPLE SMALL FILES: Package into single ZIP
   let zipName = 'Shared_Files.zip';
   if (explicitFolderName) {
     zipName = `${explicitFolderName.replace(/[\/\\]/g, '')}.zip`;
@@ -2139,7 +2169,7 @@ async function onFilesSelected(list, isFolder = false, explicitFolderName = '') 
   document.getElementById('share-step2').style.display = 'none';
   document.getElementById('share-packaging').style.display = 'block';
   document.getElementById('packTitle').textContent = `Archiving into ${zipName}…`;
-  document.getElementById('packSub').textContent = `Packaging ${files.length} items for high-speed transmission`;
+  document.getElementById('packSub').textContent = `Packaging ${files.length} items for transmission`;
   document.getElementById('packFill').style.width = '0%';
   document.getElementById('packPercent').textContent = '0%';
 
@@ -2161,10 +2191,13 @@ async function onFilesSelected(list, isFolder = false, explicitFolderName = '') 
     startSharing();
     toast(`Packaged ${files.length} files into single ${zipName}`, 'success');
   } catch (err) {
-    console.error('ZIP packaging failed:', err);
+    console.warn('ZIP packaging skipped, seamlessly using Direct Mode:', err);
     document.getElementById('share-packaging').style.display = 'none';
-    document.getElementById('share-step1').style.display = 'block';
-    toast(`Failed to package ZIP: ${err.message}`, 'error');
+    files.forEach(f => { f.isZippedBundle = false; });
+    sharedFiles = files;
+    originalSource = files;
+    startSharing();
+    toast(`Switched to Direct Mode (${files.length} files ready)`, 'info');
   }
 }
 
@@ -2784,6 +2817,7 @@ function setPinInputValue(code) {
   }
 }
 
+let receivedRelayMeta = null;
 let relayPollTimer = null;
 
 async function checkRelayChannel(code) {
@@ -3002,6 +3036,10 @@ function connectToPeer() {
     });
 
     recvConn.on('close', () => {
+      if (receivedRelayMeta || (document.getElementById('recv-step2') && document.getElementById('recv-step2').style.display === 'block')) {
+        console.log('[FileShare] Ignoring P2P close because relay is active');
+        return;
+      }
       toast('Sender disconnected', 'warn');
       document.getElementById('recv-step1').style.display = 'block';
       document.getElementById('recv-step2').style.display = 'none';
@@ -3011,6 +3049,10 @@ function connectToPeer() {
     });
 
     recvConn.on('error', err => {
+      if (receivedRelayMeta || (document.getElementById('recv-step2') && document.getElementById('recv-step2').style.display === 'block')) {
+        console.log('[FileShare] Ignoring P2P error because relay is active');
+        return;
+      }
       setRecvStatus('❌ Connection error: ' + err.message);
       btn.disabled = false;
     });
@@ -3018,7 +3060,7 @@ function connectToPeer() {
 
   peer.on('error', (err) => {
     // If file was already found on Cloud Relay, ignore WebRTC error!
-    if (document.getElementById('recv-step2').style.display === 'block') {
+    if (receivedRelayMeta || (document.getElementById('recv-step2') && document.getElementById('recv-step2').style.display === 'block')) {
       console.log('[FileShare] Ignoring P2P error because relay is active:', err.type);
       return;
     }
