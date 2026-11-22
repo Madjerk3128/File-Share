@@ -1,0 +1,2922 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FileShare — Direct High-Speed P2P Transfer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    /* ════════════════════════════════════════════════════════════
+       FILESHARE — MODERN QUIET LUXURY DESIGN SYSTEM
+       A human-crafted utility interface built for distinction,
+       understated elegance, trust, and effortless utility.
+       ════════════════════════════════════════════════════════════ */
+
+    :root {
+      /* ── Light Mode Palette ── */
+      --bg:               #F6F2EA;
+      --surface:          #FFFEFB;
+      --surface-alt:      #E8E0D5;
+      --surface-elevated: #FFFFFF;
+      --text:             #302820;
+      --text-secondary:   #786C5E;
+      --text-muted:       #A69A8B;
+      --accent:           #A78359;
+      --accent-hover:     #8D6D49;
+      --accent-subtle:    rgba(167, 131, 89, 0.09);
+      --border:           #E5DDD1;
+      --border-subtle:    #EFEAE1;
+      --border-strong:    #C8BDB0;
+      --success:          #78836A;
+      --success-bg:       rgba(120, 131, 106, 0.10);
+      --warning:          #C09456;
+      --warning-bg:       rgba(192, 148, 86, 0.10);
+      --error:            #B77E78;
+      --error-bg:         rgba(183, 126, 120, 0.10);
+
+      /* ── Typography & Structure ── */
+      --font-serif:       'DM Serif Display', Georgia, serif;
+      --font-sans:        'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono:        'JetBrains Mono', monospace;
+
+      --radius-xs:        4px;
+      --radius-sm:        7px;
+      --radius-md:        11px;
+      --radius-lg:        16px;
+      --radius-full:      9999px;
+
+      --shadow-sm:        0 1px 3px rgba(48, 40, 32, 0.04), 0 1px 2px rgba(48, 40, 32, 0.02);
+      --shadow-md:        0 4px 16px rgba(48, 40, 32, 0.06), 0 1px 3px rgba(48, 40, 32, 0.03);
+      --shadow-lg:        0 12px 36px rgba(48, 40, 32, 0.08), 0 2px 6px rgba(48, 40, 32, 0.03);
+
+      --transition-fast:  150ms cubic-bezier(0.2, 0.8, 0.4, 1);
+      --transition-base:  220ms cubic-bezier(0.2, 0.8, 0.4, 1);
+    }
+
+    /* ── Dark Mode Support (System & Manual) ── */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg:               #211D19;
+        --surface:          #302922;
+        --surface-alt:      #3A322A;
+        --surface-elevated: #362E27;
+        --text:             #F4EDE2;
+        --text-secondary:   #B8AA98;
+        --text-muted:       #877A6C;
+        --accent:           #C09A6B;
+        --accent-hover:     #A07A4F;
+        --accent-subtle:    rgba(192, 154, 107, 0.12);
+        --border:           #453B31;
+        --border-subtle:    #362D24;
+        --border-strong:    #5B4E42;
+        --success:          #8FA07E;
+        --success-bg:       rgba(143, 160, 126, 0.12);
+        --warning:          #C09456;
+        --warning-bg:       rgba(192, 148, 86, 0.12);
+        --error:            #C48B85;
+        --error-bg:         rgba(196, 139, 133, 0.12);
+        --shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.35);
+        --shadow-md:        0 4px 16px rgba(0, 0, 0, 0.45);
+        --shadow-lg:        0 12px 36px rgba(0, 0, 0, 0.55);
+      }
+    }
+
+    [data-theme="dark"] {
+      --bg:               #211D19;
+      --surface:          #302922;
+      --surface-alt:      #3A322A;
+      --surface-elevated: #362E27;
+      --text:             #F4EDE2;
+      --text-secondary:   #B8AA98;
+      --text-muted:       #877A6C;
+      --accent:           #C09A6B;
+      --accent-hover:     #A07A4F;
+      --accent-subtle:    rgba(192, 154, 107, 0.12);
+      --border:           #453B31;
+      --border-subtle:    #362D24;
+      --border-strong:    #5B4E42;
+      --success:          #8FA07E;
+      --success-bg:       rgba(143, 160, 126, 0.12);
+      --warning:          #C09456;
+      --warning-bg:       rgba(192, 148, 86, 0.12);
+      --error:            #C48B85;
+      --error-bg:         rgba(196, 139, 133, 0.12);
+      --shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.35);
+      --shadow-md:        0 4px 16px rgba(0, 0, 0, 0.45);
+      --shadow-lg:        0 12px 36px rgba(0, 0, 0, 0.55);
+    }
+
+    /* ── Reset & Foundation ── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      font-size: 15px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color var(--transition-base), color var(--transition-base);
+    }
+
+    /* ══════════════ NAVIGATION BAR ══════════════ */
+    nav {
+      width: 100%;
+      background-color: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background-color var(--transition-base), border-color var(--transition-base);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+    }
+    .brand:hover .brand-icon {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .logo {
+      font-family: var(--font-serif);
+      font-size: 1.35rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      color: var(--text);
+    }
+    .logo-file {
+      color: var(--text);
+    }
+    .logo-share {
+      color: var(--accent);
+      font-style: italic;
+      margin-left: 1px;
+    }
+
+    .nav-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 6px;
+    }
+
+    .badge-pill {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      color: var(--text-secondary);
+    }
+    .badge-p2p {
+      color: var(--accent);
+    }
+    .badge-anynet {
+      color: var(--success);
+    }
+
+    .nav-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .theme-toggle-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all var(--transition-fast);
+    }
+    .theme-toggle-btn:hover {
+      background: var(--surface-alt);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      padding: 6px 13px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all var(--transition-fast);
+    }
+    .nav-btn:hover {
+      background: var(--surface-alt);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    /* ══════════════ APP CONTAINER & PAGES ══════════════ */
+    .app-container {
+      width: 100%;
+      max-width: 760px;
+      padding: 44px 20px 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .page {
+      display: none;
+      width: 100%;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .page.active {
+      display: flex;
+      animation: gentleFadeIn 280ms cubic-bezier(0.2, 0.8, 0.4, 1);
+    }
+    @keyframes gentleFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ══════════════ HERO SECTION (HOME) ══════════════ */
+    .hero {
+      text-align: center;
+      padding: 16px 0 10px;
+    }
+
+    .network-shield-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background-color: var(--success-bg);
+      border: 1px solid rgba(120, 131, 106, 0.28);
+      color: var(--success);
+      border-radius: var(--radius-full);
+      padding: 5px 14px;
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-serif);
+      font-size: 2.75rem;
+      font-weight: 400;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    .gradient-text {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .hero p {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.62;
+      max-width: 580px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    .hero-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: center;
+      margin-top: 22px;
+    }
+
+    .feature-chip {
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: var(--radius-full);
+      padding: 5px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      transition: border-color var(--transition-fast), color var(--transition-fast);
+    }
+    .feature-chip:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+
+    /* ══════════════ ACTION CARDS ══════════════ */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media(max-width: 600px) {
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+
+    .action-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 26px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+    .action-card::before {
+      content: '';
+      position: absolute;
+      top: 24px;
+      bottom: 24px;
+      left: 0;
+      width: 3px;
+      border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+      background: var(--border);
+      transition: background-color var(--transition-base);
+    }
+    .action-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-md);
+    }
+    .action-card:not(.card-receive):hover::before {
+      background: var(--accent);
+    }
+    .action-card.card-receive:hover::before {
+      background: var(--success);
+    }
+
+    .card-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      margin-bottom: 20px;
+      transition: border-color var(--transition-fast);
+    }
+    .action-card:hover .card-icon-wrap {
+      border-color: var(--border-strong);
+    }
+
+    .action-card h2 {
+      font-family: var(--font-serif);
+      font-size: 1.38rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      margin-bottom: 7px;
+      color: var(--text);
+    }
+
+    .action-card p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      flex-grow: 1;
+    }
+
+    .card-action-hint {
+      margin-top: 22px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent);
+      letter-spacing: 0.01em;
+      transition: gap var(--transition-fast);
+    }
+    .action-card.card-receive .card-action-hint {
+      color: var(--success);
+    }
+    .action-card:hover .card-action-hint {
+      gap: 9px;
+    }
+
+    /* ══════════════ INFORMATIONAL BANNER ══════════════ */
+    .banner-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius-md);
+      padding: 18px 22px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .banner-box-header {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--text);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .banner-box p {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ══════════════ SECTION CARDS (WORKSPACES) ══════════════ */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 34px 30px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: 1.48rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .back-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-family: var(--font-sans);
+      align-self: flex-start;
+      margin-bottom: -6px;
+      transition: all var(--transition-fast);
+    }
+    .back-btn:hover {
+      background: var(--surface-alt);
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+    /* ══════════════ BUTTON SYSTEM ══════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      font-family: var(--font-sans);
+      user-select: none;
+      transition: all var(--transition-fast);
+    }
+    .btn:active {
+      transform: translateY(1px);
+    }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #FFFFFF;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      box-shadow: 0 2px 8px rgba(167, 131, 89, 0.28);
+    }
+
+    .btn-green {
+      background: var(--success);
+      color: #FFFFFF;
+      border-color: var(--success);
+    }
+    .btn-green:hover:not(:disabled) {
+      background: #6A745D;
+      border-color: #6A745D;
+      box-shadow: 0 2px 8px rgba(120, 131, 106, 0.28);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover:not(:disabled) {
+      background: var(--surface-alt);
+      border-color: var(--border-strong);
+    }
+
+    .btn-danger {
+      background: var(--error-bg);
+      border: 1px solid rgba(183, 126, 120, 0.35);
+      color: var(--error);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: var(--error);
+      color: #FFFFFF;
+      border-color: var(--error);
+    }
+
+    .btn-sm {
+      padding: 6px 13px;
+      font-size: 0.8rem;
+    }
+
+    /* ══════════════ DROP ZONE ══════════════ */
+    .drop-zone {
+      border: 1.5px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 44px 24px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface-alt);
+      transition: all var(--transition-base);
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+    }
+
+    .dz-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      display: inline-block;
+      transition: transform var(--transition-fast);
+      opacity: 0.9;
+    }
+    .drop-zone:hover .dz-icon {
+      transform: scale(1.06);
+    }
+
+    .dz-text {
+      font-family: var(--font-serif);
+      font-size: 1.25rem;
+      font-weight: 400;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .dz-sub {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      margin-bottom: 22px;
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.5;
+    }
+
+    .pick-btns-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    input[type=file] {
+      display: none;
+    }
+
+    /* ══════════════ PACKAGING PROGRESS ══════════════ */
+    .packaging-box {
+      text-align: center;
+      padding: 38px 20px;
+    }
+    .pack-anim-icon {
+      font-size: 2.8rem;
+      margin-bottom: 14px;
+      display: inline-block;
+      animation: gentleBounce 1.4s ease-in-out infinite;
+    }
+    @keyframes gentleBounce {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+
+    /* ══════════════ 6-DIGIT SENDER PIN DISPLAY ══════════════ */
+    .code-display-card {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .code-label-top {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .pin-tiles {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 4px 0 18px;
+    }
+
+    .pin-tile {
+      width: 50px;
+      height: 62px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-fast);
+    }
+    .pin-tile.active {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    @media(max-width: 480px) {
+      .pin-tiles { gap: 6px; }
+      .pin-tile  { width: 42px; height: 54px; font-size: 1.7rem; }
+    }
+
+    .code-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .qr-card-container {
+      background: #FFFFFF;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      width: fit-content;
+      margin: 18px auto 0;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-md);
+      text-align: center;
+    }
+    #qrcode img, #qrcode canvas {
+      margin: 0 auto;
+      border-radius: 4px;
+    }
+    .qr-instruction {
+      color: #554A3E;
+      font-size: 0.76rem;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+
+    /* ══════════════ RECEIVER PIN INPUT ══════════════ */
+    .pin-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .pin-boxes {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .pin-input-box {
+      width: 50px;
+      height: 62px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 1.9rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      text-align: center;
+      outline: none;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-fast);
+    }
+    .pin-input-box:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-subtle);
+    }
+
+    @media(max-width: 480px) {
+      .pin-boxes { gap: 6px; }
+      .pin-input-box { width: 42px; height: 54px; font-size: 1.6rem; }
+    }
+
+    .recv-btn-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ══════════════ CAMERA SCANNER ══════════════ */
+    .scanner-card {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .scanner-viewport-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--border-strong);
+      background: #000;
+    }
+    #qrReader video {
+      width: 100%!important;
+      height: auto!important;
+      border-radius: var(--radius-sm);
+    }
+    .scanner-laser {
+      position: absolute;
+      top: 8%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: laserSweep 2s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 5;
+    }
+    @keyframes laserSweep {
+      0%   { top: 8%; opacity: 0.7; }
+      50%  { top: 88%; opacity: 1; }
+      100% { top: 8%; opacity: 0.7; }
+    }
+    .scanner-controls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .camera-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.8rem;
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      outline: none;
+      font-family: var(--font-sans);
+    }
+
+    /* ══════════════ DEVICE CONNECTED CARDS ══════════════ */
+    .device-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--success);
+    }
+    .dc-icon {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+    .dc-info {
+      min-width: 0;
+      flex: 1;
+    }
+    .dc-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dc-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .network-stat-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-secondary);
+    }
+    .network-stat-pill.p2p-direct {
+      background: var(--success-bg);
+      color: var(--success);
+      border-color: rgba(120, 131, 106, 0.3);
+    }
+    .network-stat-pill.p2p-relay {
+      background: var(--accent-subtle);
+      color: var(--accent);
+      border-color: rgba(167, 131, 89, 0.3);
+    }
+
+    /* ── Status Dots & Spinners ── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-green  { background: var(--success); }
+    .dot-yellow { background: var(--warning); }
+    .dot-red    { background: var(--error); }
+
+    .connecting-anim {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 1.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════ FILE LIST ══════════════ */
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .file-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .file-list::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: var(--radius-full);
+    }
+
+    .file-item {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      transition: border-color var(--transition-fast), background-color var(--transition-fast);
+    }
+    .file-item:hover {
+      border-color: var(--border-strong);
+    }
+    .file-item.active-transfer {
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+    }
+
+    .fi-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .fi-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+    .fi-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      opacity: 0.9;
+    }
+    .fi-info {
+      min-width: 0;
+    }
+    .fi-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fi-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+    .fi-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .fi-size {
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+    }
+
+    /* ── Progress Indicators ── */
+    .prog-wrap {
+      margin-top: 10px;
+      display: none;
+      background: var(--surface);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .prog-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .prog-label {
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .prog-speed {
+      color: var(--success);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+    }
+    .prog-eta {
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .progress-bar {
+      background: var(--surface-alt);
+      border-radius: var(--radius-full);
+      height: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: var(--radius-full);
+      transition: width 0.12s linear;
+    }
+    .progress-fill.green-fill {
+      background: var(--success);
+    }
+
+    /* ── Badges & Chips ── */
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      background: var(--surface-alt);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .tag-green {
+      background: var(--success-bg);
+      color: var(--success);
+      border-color: rgba(120, 131, 106, 0.3);
+    }
+
+    .folder-badge {
+      font-size: 0.84rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      padding: 5px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface-alt);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ══════════════ MODAL DIALOG ══════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(33, 29, 25, 0.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active {
+      display: flex;
+      animation: modalFade 200ms ease-out;
+    }
+    @keyframes modalFade {
+      from { opacity: 0; transform: scale(0.98); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 30px 28px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal-card h3 {
+      font-family: var(--font-serif);
+      font-size: 1.4rem;
+      font-weight: 400;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .modal-card p {
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      line-height: 1.58;
+      margin-bottom: 18px;
+    }
+
+    .diagnostic-item {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      margin-bottom: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .diagnostic-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.86rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .diagnostic-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+    }
+    .diagnostic-status.tag-green {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid rgba(120, 131, 106, 0.3);
+    }
+
+    /* ══════════════ TOAST NOTIFICATIONS ══════════════ */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      font-size: 0.86rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all var(--transition-base);
+      z-index: 9999;
+      pointer-events: none;
+      max-width: 360px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .toast.toast-success {
+      border-left: 3px solid var(--success);
+    }
+    .toast.toast-error {
+      border-left: 3px solid var(--error);
+    }
+    .toast.toast-warn {
+      border-left: 3px solid var(--warning);
+    }
+
+    /* ══════════════ MISC & RESPONSIVENESS ══════════════ */
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 22px 0;
+    }
+
+    @media(max-width: 580px) {
+      nav { padding: 0 16px; }
+      .hero h1 { font-size: 2.15rem; }
+      .section-card { padding: 24px 18px; }
+      .app-container { padding: 26px 14px 60px; }
+    }
+  </style>
+  <script>
+    function toggleThemeMode() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const isDark = current === 'dark' || (!current && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const next = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('fileshare_theme', next); } catch(_) {}
+      updateThemeIcon();
+    }
+    function updateThemeIcon() {
+      const icon = document.getElementById('themeToggleIcon');
+      if (!icon) return;
+      const current = document.documentElement.getAttribute('data-theme');
+      const isDark = current === 'dark' || (!current && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      icon.textContent = isDark ? '☀️' : '🌙';
+    }
+    try {
+      const saved = localStorage.getItem('fileshare_theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    } catch(_) {}
+    window.addEventListener('DOMContentLoaded', updateThemeIcon);
+  </script>
+</head>
+<body>
+
+<!-- ══════════════ NAVBAR ══════════════ -->
+<nav>
+  <div class="brand" onclick="goHome()">
+    <div class="brand-icon">F</div>
+    <div class="logo"><span class="logo-file">File</span><span class="logo-share">Share</span></div>
+    <div class="nav-badges">
+      <span class="badge-pill badge-p2p">P2P</span>
+      <span class="badge-pill badge-anynet">Any Network</span>
+    </div>
+  </div>
+
+  <div class="nav-right-actions">
+    <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleThemeMode()" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+      <span id="themeToggleIcon">🌙</span>
+    </button>
+    <button class="nav-btn" onclick="openNetworkModal()">
+      <span class="status-dot dot-green" id="navNetworkDot"></span>
+      <span>Network Status</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ══════════════ MAIN CONTENT ══════════════ -->
+<div class="app-container">
+
+  <!-- ══════════════ PAGE: HOME ══════════════ -->
+  <div class="page active" id="page-home">
+    <div class="hero">
+      <div class="network-shield-badge">
+        Cross-Network &amp; Ethernet P2P Traversal Active
+      </div>
+      <h1>Direct, High-Speed Sharing<br><span class="gradient-text">Across Any Network</span></h1>
+      <p>Transfer files directly between PC, phone, and Mac using a 6-digit PIN or instant QR scan. Without Cloudflare WARP or VPNs — engineered for Ethernet, Wi-Fi, and 4G/5G mobile carriers.</p>
+      
+      <div class="hero-features">
+        <span class="feature-chip">Zero VPN Required</span>
+        <span class="feature-chip">Ethernet &amp; Cellular Traversal</span>
+        <span class="feature-chip">Direct P2P Speed</span>
+        <span class="feature-chip">Single File Direct</span>
+        <span class="feature-chip">Auto-ZIP for Folders</span>
+        <span class="feature-chip">Keep-Awake Engine</span>
+      </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="cards-grid">
+      <div class="action-card" onclick="goShare()">
+        <div class="card-icon-wrap">📤</div>
+        <h2>Send Files or Folder</h2>
+        <p>Select any file or folder to generate a 6-digit PIN and immediate QR code for instant recipient connection.</p>
+        <div class="card-action-hint">Start Sending →</div>
+      </div>
+
+      <div class="action-card card-receive" onclick="goReceive()">
+        <div class="card-icon-wrap">📥</div>
+        <h2>Receive Files</h2>
+        <p>Enter the 6-digit PIN from the sender or tap Scan QR using your phone or laptop camera.</p>
+        <div class="card-action-hint">Receive Files →</div>
+      </div>
+    </div>
+
+    <!-- Multi-Path NAT & Engine Highlights -->
+    <div class="banner-box">
+      <div class="banner-box-header">Multi-Path NAT &amp; Ethernet Traversal Engine</div>
+      <p>Configured with dual-path STUN and TURN relays across UDP and TCP on ports 80 and 443. Your PC on Ethernet communicates directly with mobile devices on Wi-Fi or cellular data without router firewall blocks or NAT hairpinning failures.</p>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE: SHARE ══════════════ -->
+  <div class="page" id="page-share">
+    <button class="back-btn" onclick="goHome()">← Back to Home</button>
+
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">Send Files or Folder</div>
+      </div>
+
+      <!-- Step 1: Drop Zone -->
+      <div id="share-step1">
+        <div class="drop-zone" id="dropZone"
+          ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)"
+          onclick="document.getElementById('fileInput').click()">
+          <div class="dz-icon">📂</div>
+          <div class="dz-text">Drag and drop files or a folder here</div>
+          <div class="dz-sub">Single files transfer directly without zipping · Multiple files or folders auto-archive into a single high-speed bundle</div>
+          
+          <div class="pick-btns-row" onclick="event.stopPropagation()">
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('fileInput').click()">Select File(s)</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('folderInput').click()">Select Folder</button>
+          </div>
+        </div>
+        <input type="file" id="fileInput" multiple onchange="onFilesSelected(this.files, false)" />
+        <input type="file" id="folderInput" multiple webkitdirectory onchange="onFilesSelected(this.files, true)" />
+      </div>
+
+      <!-- Step Packaging Progress -->
+      <div id="share-packaging" class="packaging-box" style="display:none;">
+        <div class="pack-anim-icon">🗜️</div>
+        <div style="font-size:1.15rem; font-weight:600; margin-bottom:4px;" id="packTitle">Archiving into ZIP…</div>
+        <div style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:18px;" id="packSub">Packaging files for high-speed transmission</div>
+        <div class="progress-bar" style="max-width:320px; margin:0 auto;">
+          <div class="progress-fill" id="packFill" style="width:0%"></div>
+        </div>
+        <div style="margin-top:10px; font-size:0.9rem; color:var(--accent); font-weight:600; font-family:var(--font-mono);" id="packPercent">0%</div>
+      </div>
+
+      <!-- Step 2: Code & Ready to Share -->
+      <div id="share-step2" style="display:none;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:18px; flex-wrap:wrap;">
+          <span class="folder-badge" id="shareSourceLabel">—</span>
+          <span id="fileCountTag" class="tag"></span>
+          <span id="totalSizeTag" class="tag tag-green"></span>
+          <span id="peerCountDisplay" style="font-size:0.82rem; font-weight:600; color:var(--success);"></span>
+        </div>
+
+        <!-- 6-Digit PIN Display -->
+        <div class="code-display-card">
+          <div class="code-label-top">Share this 6-Digit PIN with Receiver</div>
+          
+          <div class="pin-tiles" id="pinTilesDisplay">
+            <div class="pin-tile">—</div>
+            <div class="pin-tile">—</div>
+            <div class="pin-tile">—</div>
+            <div class="pin-tile">—</div>
+            <div class="pin-tile">—</div>
+            <div class="pin-tile">—</div>
+          </div>
+
+          <div class="code-actions">
+            <button class="btn btn-primary btn-sm" onclick="copyCode()">Copy Code</button>
+            <button class="btn btn-outline btn-sm" onclick="copyLink()">Copy Link</button>
+            <button class="btn btn-outline btn-sm" onclick="shareNative()">Share</button>
+            <button class="btn btn-outline btn-sm" id="qrToggleBtn" onclick="toggleQr()">QR Code</button>
+          </div>
+
+          <!-- Inline QR Code container -->
+          <div id="qrContainer" class="qr-card-container" style="display:none;">
+            <div id="qrcode"></div>
+            <div class="qr-instruction">Point recipient camera at QR code to connect</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div class="status-badge">
+            <span class="status-dot dot-yellow" id="statusDot"></span>
+            <span id="statusText">Establishing signaling link…</span>
+          </div>
+          <span class="network-stat-pill" id="transferModeBadge">Ready</span>
+        </div>
+
+        <!-- Connected Receivers List -->
+        <div id="connectedDevices" style="display:none; margin-top:16px;"></div>
+
+        <hr class="divider" />
+
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <div style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);" id="shareListLabel">Prepared Files</div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('addMoreInput').click()">Add More</button>
+            <button class="btn btn-danger btn-sm" onclick="stopSharing()">Stop Sharing</button>
+          </div>
+        </div>
+        <div class="file-list" id="shareFileList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ PAGE: RECEIVE ══════════════ -->
+  <div class="page" id="page-receive">
+    <button class="back-btn" onclick="goHome()">← Back to Home</button>
+
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">Receive Files</div>
+      </div>
+
+      <!-- Receiver Step 1: Input Code or QR -->
+      <div id="recv-step1">
+        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px; line-height:1.55;">
+          Enter the 6-digit PIN provided by the sender or scan their QR code using your device camera:
+        </p>
+
+        <!-- 6-PIN Digit Boxes -->
+        <div class="pin-input-group">
+          <div class="pin-boxes" id="pinInputs">
+            <input type="text" class="pin-input-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" autofocus />
+            <input type="text" class="pin-input-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" />
+            <input type="text" class="pin-input-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" />
+            <input type="text" class="pin-input-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" />
+            <input type="text" class="pin-input-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" />
+            <input type="text" class="pin-input-box" maxlength="1" inputmode="numeric" pattern="[0-9]*" />
+          </div>
+
+          <div class="recv-btn-row">
+            <button class="btn btn-outline" id="scanQrBtn" onclick="openQrScanner()">
+              <span>Scan QR Code</span>
+            </button>
+            <button class="btn btn-green" id="connectBtn" onclick="connectToPeer()">
+              <span>Connect</span> <span>→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Camera QR Scanner -->
+        <div id="scannerBox" class="scanner-card" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="font-weight:600; font-size:0.9rem; color:var(--text);">Scanning for QR Code</div>
+            <button class="btn btn-outline btn-sm" onclick="closeQrScanner()">✕ Close</button>
+          </div>
+
+          <div class="scanner-viewport-wrapper">
+            <div id="qrReader"></div>
+            <div class="scanner-laser"></div>
+          </div>
+
+          <div class="scanner-controls">
+            <select id="cameraSelect" class="camera-select" onchange="switchCamera(this.value)"></select>
+            <button class="btn btn-outline btn-sm" id="torchBtn" onclick="toggleTorch()" style="display:none;">Torch</button>
+          </div>
+          <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:8px;">Point camera steadily at sender screen</div>
+        </div>
+
+        <div id="recv-connect-status" style="margin-top:16px; font-size:0.86rem; color:var(--text-secondary); text-align:center;"></div>
+      </div>
+
+      <!-- Receiver Step 2: Download Screen -->
+      <div id="recv-step2" style="display:none;">
+        <div id="senderDeviceCard" class="device-card" style="display:none; margin-bottom:18px;">
+          <div class="dc-icon" id="senderDeviceIcon">💻</div>
+          <div class="dc-info">
+            <div class="dc-name" id="senderDeviceName">Sender Device</div>
+            <div class="dc-sub" id="senderDeviceSub">Connected · Ready for high-speed download</div>
+            <div class="network-stat-pill" id="recvConnTypeBadge">Connected</div>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div class="folder-badge" id="recvSourceLabel">Shared File</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-green btn-sm" id="recvDownloadMainBtn" onclick="downloadAll()">Download All</button>
+            <button class="btn btn-outline btn-sm" onclick="disconnectRecv()">Disconnect</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom:10px; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);" id="recvFileCountLabel">Available Files</div>
+        <div class="file-list" id="recvFileList"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════ NETWORK DIAGNOSTIC MODAL ══════════════ -->
+<div class="modal-overlay" id="networkModal" onclick="if(event.target===this) closeNetworkModal()">
+  <div class="modal-card">
+    <h3>Network &amp; NAT Traversal Engine</h3>
+    <p>FileShare incorporates an enterprise multi-path ICE topology with STUN and TURN relays to guarantee reliable peer-to-peer delivery across any local network or cellular provider without VPNs.</p>
+
+    <div class="diagnostic-item">
+      <div class="diagnostic-left">
+        <div>
+          <div>Ethernet &amp; Wi-Fi Interop</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary);">Direct &amp; NAT-Loopback bypass active</div>
+        </div>
+      </div>
+      <span class="diagnostic-status tag-green">Active</span>
+    </div>
+
+    <div class="diagnostic-item">
+      <div class="diagnostic-left">
+        <div>
+          <div>Symmetric NAT &amp; Mobile CGNAT</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary);">TURN TCP/UDP fallback enabled (Port 443/80)</div>
+        </div>
+      </div>
+      <span class="diagnostic-status tag-green">Supported</span>
+    </div>
+
+    <div class="diagnostic-item">
+      <div class="diagnostic-left">
+        <div>
+          <div>Flow-Controlled SCTP Engine</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary);">64 KB MTU chunks with dynamic backpressure</div>
+        </div>
+      </div>
+      <span class="diagnostic-status tag-green">Optimized</span>
+    </div>
+
+    <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+      <button class="btn btn-primary btn-sm" onclick="closeNetworkModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="addMoreInput" multiple onchange="onMoreFilesAdded(this.files, false)" style="display:none" />
+
+<!-- ══════════════ SCRIPT LOGIC ══════════════ -->
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════
+//  ⚡ MULTI-PATH ANY-NETWORK ICE & STUN/TURN CONFIG
+//  Equipped with both UDP and TCP fallback on ports 80/443
+//  Enables direct connection across Ethernet, Symmetric NAT,
+//  and Mobile 4G/5G carriers without Cloudflare WARP.
+// ══════════════════════════════════════════════════════
+const CHUNK_SIZE   = 64 * 1024;        // 64 KB per chunk (safe across all MTUs & OS)
+const HIGH_WATER   = 4  * 1024 * 1024; // 4 MB flow control threshold
+const LOW_WATER    = 1  * 1024 * 1024; // 1 MB resume threshold
+const SPEED_WINDOW = 800;              // Speed calculation window in ms
+
+const ICE_SERVERS = [
+  // Fast Google & Public STUN for Direct P2P
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  { urls: 'stun:stun.services.mozilla.com:3478' },
+
+  // Open Relay Project TURN Servers (Bypasses Ethernet firewall, Symmetric NAT, AP isolation)
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  },
+  {
+    urls: 'turn:staticauth.openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayprojectsecret'
+  },
+  {
+    urls: 'turn:staticauth.openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayprojectsecret'
+  },
+  {
+    urls: 'turns:staticauth.openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayprojectsecret'
+  }
+];
+
+const PEER_CONFIG = {
+  debug: 0,
+  config: {
+    iceServers: ICE_SERVERS,
+    sdpSemantics: 'unified-plan',
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require'
+  }
+};
+
+// ══════════════════════════════════════════════════════
+//  DEVICE IDENTITY
+// ══════════════════════════════════════════════════════
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let os = 'Unknown Device';
+  if (/Windows NT 10/.test(ua))        os = 'Windows PC';
+  else if (/Windows NT 6\./.test(ua))  os = 'Windows PC';
+  else if (/Windows/.test(ua))         os = 'Windows';
+  else if (/iPhone/.test(ua))          os = 'iPhone';
+  else if (/iPad/.test(ua))            os = 'iPad';
+  else if (/Android/.test(ua) && /Mobile/.test(ua)) os = 'Android Phone';
+  else if (/Android/.test(ua))         os = 'Android Tablet';
+  else if (/Mac OS X/.test(ua) && !/Mobile/.test(ua)) os = 'MacBook';
+  else if (/Linux/.test(ua))           os = 'Linux PC';
+  else if (/CrOS/.test(ua))            os = 'Chromebook';
+
+  let browser = 'Browser';
+  if (/Edg\//.test(ua))        browser = 'Edge';
+  else if (/OPR\//.test(ua))   browser = 'Opera';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+
+  let icon = '💻';
+  if (/iPhone|Android.*Mobile/.test(ua)) icon = '📱';
+  else if (/iPad|Android/.test(ua))      icon = '📟';
+  else if (/Mac/.test(os))               icon = '🖥️';
+
+  return { name: os, browser, icon, label: `${os} · ${browser}` };
+}
+
+const MY_DEVICE = getDeviceInfo();
+
+// ══════════════════════════════════════════════════════
+//  ⏱️ KEEP-AWAKE & BACKGROUND RESILIENCE ENGINE
+//  Prevents mobile phone screen from turning off or sleeping
+// ══════════════════════════════════════════════════════
+let wakeLock       = null;
+let keepAwakeTimer = null;
+let audioCtx       = null;
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (_) {}
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    try { wakeLock.release(); } catch (_) {}
+    wakeLock = null;
+  }
+}
+
+function startSilentAudio() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx && AudioContext) {
+      audioCtx = new AudioContext();
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.00001;
+      const osc = audioCtx.createOscillator();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  } catch (_) {}
+}
+
+function stopSilentAudio() {
+  try {
+    if (audioCtx) {
+      audioCtx.close();
+      audioCtx = null;
+    }
+  } catch (_) {}
+}
+
+function playScanChime() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {}
+}
+
+function startKeepAwake() {
+  stopKeepAwake();
+  requestWakeLock();
+  startSilentAudio();
+
+  keepAwakeTimer = setInterval(() => {
+    requestWakeLock();
+    startSilentAudio();
+
+    if (shareConns.length > 0) {
+      shareConns.forEach(conn => {
+        if (conn && conn.open) {
+          try { conn.send({ type: 'ping' }); } catch (_) {}
+        }
+      });
+    }
+
+    if (recvConn && recvConn.open) {
+      try { recvConn.send({ type: 'ping' }); } catch (_) {}
+    }
+  }, 25000);
+}
+
+function stopKeepAwake() {
+  if (keepAwakeTimer) {
+    clearInterval(keepAwakeTimer);
+    keepAwakeTimer = null;
+  }
+  releaseWakeLock();
+  stopSilentAudio();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    requestWakeLock();
+    startSilentAudio();
+  }
+});
+
+// ══════════════════════════════════════════════════════
+//  NAVIGATION & PAGES
+// ══════════════════════════════════════════════════════
+function showPage(id) {
+  closeQrScanner();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goHome() {
+  closeQrScanner();
+  stopSharing();
+  disconnectRecv();
+  showPage('page-home');
+}
+
+function goShare() {
+  showPage('page-share');
+}
+
+function goReceive() {
+  showPage('page-receive');
+  initPinInputs();
+  const code = new URLSearchParams(location.search).get('code');
+  if (code && /^\d{6}$/.test(code)) {
+    setPinInputValue(code);
+    connectToPeer();
+  }
+}
+
+function openNetworkModal() {
+  document.getElementById('networkModal').classList.add('active');
+}
+function closeNetworkModal() {
+  document.getElementById('networkModal').classList.remove('active');
+}
+
+// ══════════════════════════════════════════════════════
+//  TOAST SYSTEM
+// ══════════════════════════════════════════════════════
+function toast(msg, type = 'info', dur = 3200) {
+  const el = document.getElementById('toast');
+  let icon = 'ℹ️';
+  if (type === 'success') icon = '✅';
+  if (type === 'error') icon = '❌';
+  if (type === 'warn') icon = '⚠️';
+
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span>${icon}</span> <span>${escHtml(msg)}</span>`;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ══════════════════════════════════════════════════════
+//  FORMATTING UTILS
+// ══════════════════════════════════════════════════════
+function formatBytes(b) {
+  if (!b && b !== 0) return '—';
+  if (b === 0) return '0 B';
+  const k = 1024, s = ['B','KB','MB','GB','TB'];
+  const i = Math.min(Math.floor(Math.log(b) / Math.log(k)), s.length - 1);
+  return (b / Math.pow(k, i)).toFixed(i > 1 ? 1 : 0) + ' ' + s[i];
+}
+
+function formatSpeed(bps) {
+  if (bps <= 0) return '';
+  return formatBytes(bps) + '/s';
+}
+
+function formatEta(remainBytes, bps) {
+  if (bps <= 0 || remainBytes <= 0) return '';
+  const s = remainBytes / bps;
+  if (s < 60)   return `${Math.ceil(s)}s left`;
+  if (s < 3600) return `${Math.ceil(s/60)}m left`;
+  return `${(s/3600).toFixed(1)}h left`;
+}
+
+function fileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const m = {
+    pdf:'📄', doc:'📝', docx:'📝', odt:'📝', rtf:'📝',
+    xls:'📊', xlsx:'📊', ods:'📊', csv:'📊', ppt:'📊', pptx:'📊',
+    jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', svg:'🖼️', webp:'🖼️', bmp:'🖼️', ico:'🖼️', heic:'🖼️',
+    mp4:'🎬', mkv:'🎬', avi:'🎬', mov:'🎬', wmv:'🎬', webm:'🎬', m4v:'🎬',
+    mp3:'🎵', wav:'🎵', flac:'🎵', aac:'🎵', ogg:'🎵', m4a:'🎵', opus:'🎵',
+    zip:'🗜️', rar:'🗜️', '7z':'🗜️', tar:'🗜️', gz:'🗜️', iso:'🗜️',
+    js:'💻', py:'💻', html:'💻', css:'💻', json:'💻', java:'💻', cpp:'💻', cs:'💻', go:'💻', rs:'💻', php:'💻',
+    exe:'⚙️', msi:'⚙️', apk:'📱', ipa:'📱', dmg:'⚙️',
+    txt:'📃', md:'📃', xml:'📃', yaml:'📃', yml:'📃'
+  };
+  return m[ext] || '📎';
+}
+
+function genCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// ══════════════════════════════════════════════════════
+//  ZIP PACKAGING (Multiple Files or Folders)
+// ══════════════════════════════════════════════════════
+async function packageIntoZip(files, zipName, onProgress) {
+  if (typeof JSZip === 'undefined') {
+    throw new Error('ZIP library not loaded. Please verify connection.');
+  }
+  const zip = new JSZip();
+
+  for (const f of files) {
+    const relPath = (f.webkitRelativePath || f.name).replace(/^\/+/, '');
+    zip.file(relPath, f);
+  }
+
+  const blob = await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 1 },
+    streamFiles: true,
+  }, (meta) => {
+    if (onProgress) onProgress(meta.percent);
+  });
+
+  return new File([blob], zipName, {
+    type: 'application/zip',
+    lastModified: Date.now(),
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  DRAG & DROP
+// ══════════════════════════════════════════════════════
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.add('drag-over');
+}
+function onDragLeave() {
+  document.getElementById('dropZone').classList.remove('drag-over');
+}
+
+async function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const files = [];
+  let containsFolder = false;
+  let topFolderName = '';
+
+  const traverse = (entry, path = '') => new Promise(res => {
+    if (entry.isFile) {
+      entry.file(f => {
+        try { Object.defineProperty(f, 'webkitRelativePath', { value: path + f.name, configurable: true }); } catch(_) {}
+        files.push(f); res();
+      }, res);
+    } else if (entry.isDirectory) {
+      containsFolder = true;
+      if (!topFolderName && !path) topFolderName = entry.name;
+      const reader = entry.createReader();
+      const read = () => reader.readEntries(async entries => {
+        if (!entries.length) return res();
+        await Promise.all(entries.map(en => traverse(en, path + entry.name + '/')));
+        read();
+      });
+      read();
+    } else res();
+  });
+
+  await Promise.all(Array.from(e.dataTransfer.items).map(item => {
+    const en = item.webkitGetAsEntry?.();
+    return en ? traverse(en) : Promise.resolve();
+  }));
+
+  if (files.length) {
+    onFilesSelected(files, containsFolder, topFolderName);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  SENDER IMPLEMENTATION
+// ══════════════════════════════════════════════════════
+let sharedFiles        = [];
+let originalSource     = [];
+let sharePeer          = null;
+let shareConns         = [];
+let currentCode        = '';
+let connDevices        = {};
+let intentionalDestroy = false;
+let reconnectDebounce  = null;
+
+async function onFilesSelected(list, isFolder = false, explicitFolderName = '') {
+  const files = Array.from(list);
+  if (!files.length) return;
+
+  const hasRelativePath = files.some(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
+  const isFolderImport  = isFolder || hasRelativePath;
+
+  // 1 FILE DIRECT RULE: Never zip single files
+  if (files.length === 1 && !isFolderImport) {
+    const singleFile = files[0];
+    singleFile.isZippedBundle = false;
+    sharedFiles = [singleFile];
+    originalSource = files;
+    startSharing();
+    toast(`1 file ready: ${singleFile.name} (Direct)`, 'success');
+    return;
+  }
+
+  // MULTIPLE FILES / FOLDER: Package into single ZIP
+  let zipName = 'Shared_Files.zip';
+  if (explicitFolderName) {
+    zipName = `${explicitFolderName.replace(/[\/\\]/g, '')}.zip`;
+  } else if (isFolderImport) {
+    const sample = files.find(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
+    if (sample) {
+      const top = sample.webkitRelativePath.split('/')[0].trim();
+      if (top) zipName = `${top}.zip`;
+    } else {
+      zipName = 'Folder_Archive.zip';
+    }
+  }
+
+  document.getElementById('share-step1').style.display = 'none';
+  document.getElementById('share-step2').style.display = 'none';
+  document.getElementById('share-packaging').style.display = 'block';
+  document.getElementById('packTitle').textContent = `Archiving into ${zipName}…`;
+  document.getElementById('packSub').textContent = `Packaging ${files.length} items for high-speed transmission`;
+  document.getElementById('packFill').style.width = '0%';
+  document.getElementById('packPercent').textContent = '0%';
+
+  try {
+    const zipFile = await packageIntoZip(files, zipName, (percent) => {
+      const p = Math.round(percent);
+      document.getElementById('packFill').style.width = `${p}%`;
+      document.getElementById('packPercent').textContent = `${p}%`;
+    });
+
+    zipFile.isZippedBundle = true;
+    zipFile.originalCount  = files.length;
+    zipFile.folderLabel    = isFolderImport ? zipName.replace(/\.zip$/i, '') : `${files.length} items`;
+
+    sharedFiles = [zipFile];
+    originalSource = files;
+
+    document.getElementById('share-packaging').style.display = 'none';
+    startSharing();
+    toast(`Packaged ${files.length} files into single ${zipName}`, 'success');
+  } catch (err) {
+    console.error('ZIP packaging failed:', err);
+    document.getElementById('share-packaging').style.display = 'none';
+    document.getElementById('share-step1').style.display = 'block';
+    toast(`Failed to package ZIP: ${err.message}`, 'error');
+  }
+}
+
+async function onMoreFilesAdded(list, isFolder = false) {
+  const newFiles = Array.from(list);
+  if (!newFiles.length) return;
+  const combined = [...originalSource, ...newFiles];
+  stopSharing();
+  await onFilesSelected(combined, isFolder);
+  document.getElementById('addMoreInput').value = '';
+}
+
+function renderPinTiles(code) {
+  const container = document.getElementById('pinTilesDisplay');
+  container.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const char = code ? code[i] || '—' : '—';
+    const tile = document.createElement('div');
+    tile.className = 'pin-tile' + (code ? ' active' : '');
+    tile.textContent = char;
+    container.appendChild(tile);
+  }
+}
+
+function startSharing() {
+  currentCode = genCode();
+  document.getElementById('share-step1').style.display = 'none';
+  document.getElementById('share-step2').style.display = 'block';
+  renderPinTiles(currentCode);
+
+  const qrBox = document.getElementById('qrContainer');
+  if (qrBox) qrBox.style.display = 'none';
+  const qrBtn = document.getElementById('qrToggleBtn');
+  if (qrBtn) qrBtn.innerHTML = '📱 QR Code';
+
+  updateShareUI();
+  setShareStatus('yellow', '<span class="connecting-anim"></span> Establishing signaling link…');
+
+  startKeepAwake();
+  connDevices = {};
+  initSharePeer(currentCode);
+}
+
+function initSharePeer(code) {
+  clearTimeout(reconnectDebounce);
+
+  intentionalDestroy = true;
+  if (sharePeer) {
+    try { sharePeer.destroy(); } catch (_) {}
+    sharePeer = null;
+  }
+  intentionalDestroy = false;
+
+  const targetId = 'fshare-' + code;
+  const peer = new Peer(targetId, PEER_CONFIG);
+  sharePeer = peer;
+
+  peer.on('open', (id) => {
+    console.log('[FileShare] Peer ready with ID:', id);
+    if (shareConns.length > 0) {
+      setShareStatus('green', `${shareConns.length} receiver(s) linked`);
+    } else {
+      setShareStatus('yellow', 'Ready — share 6-digit PIN with receiver');
+    }
+  });
+
+  peer.on('connection', (conn) => {
+    // Monitor connection open
+    conn.on('open', () => {
+      if (!shareConns.includes(conn)) {
+        shareConns.push(conn);
+      }
+      updatePeerCount();
+      setShareStatus('green', `${shareConns.length} receiver(s) connected`);
+      inspectCandidatePair(conn, 'transferModeBadge');
+      sendManifest(conn);
+    });
+
+    conn.on('data', async (data) => {
+      if (data.type === 'ping') {
+        try { conn.send({ type: 'pong' }); } catch (_) {}
+        return;
+      }
+      if (data.type === 'pong') return;
+
+      if (data.type === 'hello') {
+        connDevices[conn.peer] = { name: data.name, browser: data.browser, icon: data.icon };
+        updateConnectedDevices();
+        return;
+      }
+      if (data.type === 'request')     await sendFile(conn, data.index);
+      if (data.type === 'request_all') {
+        for (let i = 0; i < sharedFiles.length; i++) await sendFile(conn, i);
+      }
+    });
+
+    conn.on('close', () => {
+      shareConns = shareConns.filter(c => c !== conn);
+      delete connDevices[conn.peer];
+      updatePeerCount();
+      updateConnectedDevices();
+      setShareStatus(
+        shareConns.length ? 'green' : 'yellow',
+        shareConns.length ? `${shareConns.length} receiver(s) connected` : 'Ready — share PIN code above'
+      );
+    });
+
+    conn.on('error', err => console.warn('[Sender Conn Err]', err));
+  });
+
+  peer.on('disconnected', () => {
+    if (intentionalDestroy) return;
+    console.warn('[FileShare] Peer disconnected.');
+    handleServerDisconnect(code);
+  });
+
+  peer.on('error', (err) => {
+    if (intentionalDestroy) return;
+    console.warn('[FileShare] Peer error:', err.type, err.message);
+
+    if (err.type === 'unavailable-id') {
+      setTimeout(() => {
+        if (currentCode === code && !shareConns.length && !intentionalDestroy) {
+          initSharePeer(code);
+        }
+      }, 1200);
+      return;
+    }
+
+    const isSocketDrop =
+      err.type === 'socket-closed' ||
+      err.type === 'socket-error' ||
+      err.type === 'network' ||
+      err.type === 'disconnected' ||
+      (err.message && err.message.toLowerCase().includes('lost connection'));
+
+    if (isSocketDrop) {
+      handleServerDisconnect(code);
+      return;
+    }
+
+    setShareStatus('red', 'Error: ' + escHtml(err.message));
+  });
+}
+
+function handleServerDisconnect(code) {
+  if (intentionalDestroy || currentCode !== code) return;
+
+  if (shareConns.length > 0) {
+    setShareStatus('green', `${shareConns.length} receiver(s) active (Direct P2P)`);
+    if (sharePeer && !sharePeer.destroyed && sharePeer.disconnected) {
+      try { sharePeer.reconnect(); } catch (_) {}
+    }
+    return;
+  }
+
+  setShareStatus('yellow', '<span class="connecting-anim"></span> Reconnecting signaling…');
+
+  clearTimeout(reconnectDebounce);
+  reconnectDebounce = setTimeout(() => {
+    if (intentionalDestroy || currentCode !== code) return;
+    if (sharePeer && !sharePeer.destroyed && sharePeer.disconnected) {
+      try {
+        sharePeer.reconnect();
+        return;
+      } catch (e) {}
+    }
+    initSharePeer(code);
+  }, 1000);
+}
+
+function inspectCandidatePair(conn, targetBadgeId) {
+  const badge = document.getElementById(targetBadgeId);
+  if (!badge || !conn || !conn.peerConnection) return;
+
+  setTimeout(async () => {
+    try {
+      const stats = await conn.peerConnection.getStats();
+      let activePair = null;
+      stats.forEach(report => {
+        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+          activePair = report;
+        }
+      });
+
+      if (activePair) {
+        const localCandidate = stats.get(activePair.localCandidateId);
+        const remoteCandidate = stats.get(activePair.remoteCandidateId);
+        const isRelay = localCandidate?.candidateType === 'relay' || remoteCandidate?.candidateType === 'relay';
+        const isDirect = localCandidate?.candidateType === 'host' || remoteCandidate?.candidateType === 'host';
+
+        if (isDirect) {
+          badge.className = 'network-stat-pill p2p-direct';
+          badge.textContent = '🟢 Direct LAN';
+        } else if (isRelay) {
+          badge.className = 'network-stat-pill p2p-relay';
+          badge.textContent = '🛡️ Any-Network Relay (No WARP)';
+        } else {
+          badge.className = 'network-stat-pill p2p-direct';
+          badge.textContent = '⚡ Direct P2P';
+        }
+      }
+    } catch (_) {}
+  }, 1000);
+}
+
+function updateConnectedDevices() {
+  const box = document.getElementById('connectedDevices');
+  const devices = Object.values(connDevices);
+  if (!devices.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = devices.map(d => `
+    <div class="device-card" style="margin-bottom:8px;">
+      <div class="dc-icon">${d.icon}</div>
+      <div class="dc-info">
+        <div class="dc-name">${escHtml(d.name)}</div>
+        <div class="dc-sub">${escHtml(d.browser)} · Linked for transfer</div>
+      </div>
+    </div>`).join('');
+}
+
+function sendManifest(conn) {
+  conn.send({
+    type: 'manifest',
+    label: getSourceLabel(),
+    senderName:    MY_DEVICE.name,
+    senderBrowser: MY_DEVICE.browser,
+    senderIcon:    MY_DEVICE.icon,
+    files: sharedFiles.map((f, i) => ({
+      index: i,
+      name: f.name,
+      size: f.size,
+      type: f.type || 'application/octet-stream',
+      path: f.webkitRelativePath || f.name,
+      isZip: f.isZippedBundle || f.name.toLowerCase().endsWith('.zip'),
+      originalCount: f.originalCount || null,
+    }))
+  });
+}
+
+// ⚡ High-Speed Chunks with Backpressure Control
+async function sendFile(conn, idx) {
+  const file = sharedFiles[idx];
+  if (!file) return;
+
+  conn.send({ type: 'start', index: idx, total: file.size, name: file.name });
+
+  const dc = conn.dataChannel;
+  let offset = 0;
+
+  while (offset < file.size) {
+    if (dc && dc.bufferedAmount > HIGH_WATER) {
+      await waitForDrain(dc);
+    }
+    const end = Math.min(offset + CHUNK_SIZE, file.size);
+    const buf = await file.slice(offset, end).arrayBuffer();
+    conn.send({ type: 'chunk', index: idx, data: buf, offset });
+    offset += buf.byteLength;
+  }
+
+  conn.send({ type: 'done', index: idx });
+}
+
+function waitForDrain(dc) {
+  return new Promise(resolve => {
+    const poll = () => {
+      if (!dc || dc.bufferedAmount <= LOW_WATER) resolve();
+      else setTimeout(poll, 3);
+    };
+    poll();
+  });
+}
+
+function getSourceLabel() {
+  if (!sharedFiles.length) return '—';
+  const f = sharedFiles[0];
+  if (f.isZippedBundle) {
+    return `🗜️ ${f.name} (${f.originalCount} files)`;
+  }
+  return '📄 ' + f.name;
+}
+
+function updateShareUI() {
+  document.getElementById('shareSourceLabel').textContent = getSourceLabel();
+  const f = sharedFiles[0];
+  if (f && f.isZippedBundle) {
+    document.getElementById('fileCountTag').textContent = `Single ZIP (${f.originalCount} files)`;
+  } else {
+    document.getElementById('fileCountTag').textContent = '1 File (Direct)';
+  }
+  document.getElementById('totalSizeTag').textContent = formatBytes(sharedFiles.reduce((s, f) => s + f.size, 0));
+  renderShareFileList();
+}
+
+function updatePeerCount() {
+  const n = shareConns.length;
+  document.getElementById('peerCountDisplay').textContent = n > 0 ? `👥 ${n} connected` : '';
+}
+
+function setShareStatus(color, htmlMsg) {
+  document.getElementById('statusDot').className = 'status-dot dot-' + color;
+  document.getElementById('statusText').innerHTML = htmlMsg;
+}
+
+function renderShareFileList() {
+  document.getElementById('shareFileList').innerHTML = sharedFiles.map((f, i) => `
+    <div class="file-item">
+      <div class="fi-row">
+        <div class="fi-left">
+          <span class="fi-icon">${f.isZippedBundle ? '🗜️' : fileIcon(f.name)}</span>
+          <div class="fi-info">
+            <div class="fi-name">${escHtml(f.name)}</div>
+            <div class="fi-meta">${f.isZippedBundle ? `Single ZIP Archive · Contains ${f.originalCount} files` : escHtml(f.type || 'Direct file')}</div>
+          </div>
+        </div>
+        <div class="fi-right">
+          <span class="fi-size">${formatBytes(f.size)}</span>
+          <button class="btn btn-outline btn-sm" onclick="removeFile(${i})" title="Remove">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function removeFile(idx) {
+  sharedFiles.splice(idx, 1);
+  originalSource = [];
+  stopSharing();
+}
+
+function stopSharing() {
+  clearTimeout(reconnectDebounce);
+  intentionalDestroy = true;
+  stopKeepAwake();
+  if (sharePeer) {
+    try { sharePeer.destroy(); } catch (_) {}
+    sharePeer = null;
+  }
+  intentionalDestroy = false;
+  shareConns = []; sharedFiles = []; originalSource = []; currentCode = ''; connDevices = {};
+  document.getElementById('share-packaging').style.display = 'none';
+  document.getElementById('share-step1').style.display = 'block';
+  document.getElementById('share-step2').style.display = 'none';
+  document.getElementById('connectedDevices').style.display = 'none';
+  renderPinTiles('');
+  ['fileInput','folderInput','addMoreInput'].forEach(id => {
+    try { document.getElementById(id).value = ''; } catch(_) {}
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  SHARE & QR HELPERS (Sender Side)
+// ══════════════════════════════════════════════════════
+async function shareNative() {
+  const url = `${location.origin}${location.pathname}?code=${currentCode}`;
+  const shareData = {
+    title: 'FileShare Direct Transfer',
+    text: `Download files using PIN ${currentCode} or this direct link:`,
+    url: url,
+  };
+
+  if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    try {
+      await navigator.share(shareData);
+      toast('Shared successfully!', 'success');
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+    }
+  }
+  copyLink();
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(currentCode).then(() => toast(`PIN ${currentCode} copied!`, 'success'));
+}
+
+function copyLink() {
+  const url = `${location.origin}${location.pathname}?code=${currentCode}`;
+  navigator.clipboard.writeText(url).then(() => toast('Direct link copied to clipboard!', 'success'));
+}
+
+function toggleQr() {
+  const box = document.getElementById('qrContainer');
+  const btn = document.getElementById('qrToggleBtn');
+  if (box.style.display === 'block') {
+    box.style.display = 'none';
+    btn.innerHTML = '📱 QR Code';
+  } else {
+    box.style.display = 'block';
+    btn.innerHTML = '✖ Hide QR';
+    renderQrCode();
+  }
+}
+
+function renderQrCode() {
+  const qrDiv = document.getElementById('qrcode');
+  qrDiv.innerHTML = '';
+  const url = `${location.origin}${location.pathname}?code=${currentCode}`;
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(qrDiv, {
+      text: url,
+      width: 180,
+      height: 180,
+      colorDark: '#090b11',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  📷 QR SCANNER (Camera on Receiver)
+// ══════════════════════════════════════════════════════
+let html5QrScanner = null;
+let currentCameraTrack = null;
+
+function extractCodeFromQr(text) {
+  if (!text) return null;
+  text = String(text).trim();
+  const urlMatch = text.match(/[?&]code=(\d{6})/i);
+  if (urlMatch) return urlMatch[1];
+  const peerMatch = text.match(/fshare-(\d{6})/i);
+  if (peerMatch) return peerMatch[1];
+  if (/^\d{6}$/.test(text)) return text;
+  return null;
+}
+
+async function openQrScanner() {
+  const box = document.getElementById('scannerBox');
+  box.style.display = 'block';
+
+  if (typeof Html5Qrcode === 'undefined') {
+    toast('Scanner library loading...', 'warn');
+    box.style.display = 'none';
+    return;
+  }
+
+  if (html5QrScanner) {
+    try { await html5QrScanner.stop(); } catch (_) {}
+    html5QrScanner = null;
+  }
+
+  const readerDiv = document.getElementById('qrReader');
+  readerDiv.innerHTML = '';
+
+  try {
+    const cameras = await Html5Qrcode.getCameras();
+    const select = document.getElementById('cameraSelect');
+    select.innerHTML = '';
+
+    if (cameras && cameras.length) {
+      cameras.forEach((cam, i) => {
+        const opt = document.createElement('option');
+        opt.value = cam.id;
+        opt.textContent = cam.label || `Camera ${i + 1}`;
+        select.appendChild(opt);
+      });
+      select.style.display = cameras.length > 1 ? 'inline-block' : 'none';
+    }
+
+    html5QrScanner = new Html5Qrcode("qrReader");
+
+    const config = {
+      fps: 20,
+      qrbox: { width: 220, height: 220 },
+      aspectRatio: 1.0,
+    };
+
+    const cameraIdOrConfig = cameras && cameras.length ? { facingMode: "environment" } : true;
+
+    await html5QrScanner.start(
+      cameraIdOrConfig,
+      config,
+      (decodedText) => {
+        const code = extractCodeFromQr(decodedText);
+        if (code) {
+          playScanChime();
+          try { navigator.vibrate?.([60, 40, 60]); } catch (_) {}
+          closeQrScanner();
+          setPinInputValue(code);
+          toast(`Scanned code ${code}! Connecting…`, 'success');
+          connectToPeer();
+        } else {
+          toast('Not a valid FileShare QR code', 'warn');
+        }
+      },
+      () => {}
+    );
+
+    checkTorchSupport();
+  } catch (err) {
+    console.warn('Camera start error:', err);
+    toast('Camera access unavailable. Enter 6-digit PIN manually.', 'warn');
+    closeQrScanner();
+  }
+}
+
+async function switchCamera(cameraId) {
+  if (!html5QrScanner) return;
+  try {
+    await html5QrScanner.stop();
+    await html5QrScanner.start(
+      cameraId,
+      { fps: 20, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+      (decodedText) => {
+        const code = extractCodeFromQr(decodedText);
+        if (code) {
+          playScanChime();
+          closeQrScanner();
+          setPinInputValue(code);
+          toast(`Scanned code ${code}! Connecting…`, 'success');
+          connectToPeer();
+        }
+      },
+      () => {}
+    );
+    checkTorchSupport();
+  } catch (e) {
+    console.warn('Camera switch error', e);
+  }
+}
+
+function checkTorchSupport() {
+  const torchBtn = document.getElementById('torchBtn');
+  torchBtn.style.display = 'none';
+  try {
+    const video = document.querySelector('#qrReader video');
+    if (video && video.srcObject) {
+      const track = video.srcObject.getVideoTracks()[0];
+      const capabilities = track.getCapabilities?.() || {};
+      if (capabilities.torch) {
+        currentCameraTrack = track;
+        torchBtn.style.display = 'inline-block';
+      }
+    }
+  } catch (_) {}
+}
+
+let torchOn = false;
+async function toggleTorch() {
+  if (!currentCameraTrack) return;
+  torchOn = !torchOn;
+  try {
+    await currentCameraTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+    document.getElementById('torchBtn').textContent = torchOn ? '🔦 Torch Off' : '🔦 Torch';
+  } catch (_) {}
+}
+
+async function closeQrScanner() {
+  const box = document.getElementById('scannerBox');
+  if (box) box.style.display = 'none';
+  if (html5QrScanner) {
+    try {
+      await html5QrScanner.stop();
+      html5QrScanner.clear();
+    } catch (_) {}
+    html5QrScanner = null;
+  }
+  currentCameraTrack = null;
+  torchOn = false;
+}
+
+// ══════════════════════════════════════════════════════
+//  RECEIVER IMPLEMENTATION
+// ══════════════════════════════════════════════════════
+let recvPeer  = null;
+let recvConn  = null;
+let recvFiles = [];
+let recvBufs  = {};
+
+function initPinInputs() {
+  const inputs = document.querySelectorAll('.pin-input-box');
+  inputs.forEach((input, index) => {
+    input.value = '';
+    input.oninput = (e) => {
+      input.value = input.value.replace(/\D/g, '');
+      if (input.value && index < inputs.length - 1) {
+        inputs[index + 1].focus();
+      }
+      if (getPinInputValue().length === 6) {
+        connectToPeer();
+      }
+    };
+    input.onkeydown = (e) => {
+      if (e.key === 'Backspace' && !input.value && index > 0) {
+        inputs[index - 1].focus();
+      }
+      if (e.key === 'Enter') {
+        connectToPeer();
+      }
+    };
+    input.onpaste = (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      const code = extractCodeFromQr(text) || text.replace(/\D/g, '').slice(0, 6);
+      if (code) {
+        setPinInputValue(code);
+        if (code.length === 6) connectToPeer();
+      }
+    };
+  });
+}
+
+function getPinInputValue() {
+  const inputs = document.querySelectorAll('.pin-input-box');
+  let code = '';
+  inputs.forEach(i => code += i.value);
+  return code.trim();
+}
+
+function setPinInputValue(code) {
+  const inputs = document.querySelectorAll('.pin-input-box');
+  for (let i = 0; i < inputs.length; i++) {
+    inputs[i].value = code[i] || '';
+  }
+}
+
+function connectToPeer() {
+  closeQrScanner();
+  const code = getPinInputValue();
+  if (!/^\d{6}$/.test(code)) {
+    toast('Enter a valid 6-digit PIN', 'warn');
+    return;
+  }
+
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true;
+  setRecvStatus('<span class="connecting-anim"></span> Initializing multi-NAT connection…');
+
+  if (recvPeer) {
+    try { recvPeer.destroy(); } catch(_) {}
+    recvPeer = null;
+  }
+
+  startKeepAwake();
+
+  // Create Receiver Peer with explicit Any-Network TURN configuration
+  const peer = new Peer(undefined, PEER_CONFIG);
+  recvPeer = peer;
+
+  peer.on('open', () => {
+    setRecvStatus('<span class="connecting-anim"></span> Locating sender across network…');
+
+    recvConn = peer.connect('fshare-' + code, {
+      reliable: true,
+      metadata: { device: MY_DEVICE },
+    });
+
+    // Monitor underlying RTCPeerConnection ICE state
+    if (recvConn && recvConn.peerConnection) {
+      recvConn.peerConnection.addEventListener('iceconnectionstatechange', () => {
+        const st = recvConn.peerConnection.iceConnectionState;
+        if (st === 'connected' || st === 'completed') {
+          inspectCandidatePair(recvConn, 'recvConnTypeBadge');
+        } else if (st === 'failed') {
+          try { recvConn.peerConnection.restartIce(); } catch(_) {}
+        }
+      });
+    }
+
+    recvConn.on('open', () => {
+      setRecvStatus('✅ Connected to sender! Transfer channel open.');
+      inspectCandidatePair(recvConn, 'recvConnTypeBadge');
+      recvConn.send({
+        type:    'hello',
+        name:    MY_DEVICE.name,
+        browser: MY_DEVICE.browser,
+        icon:    MY_DEVICE.icon,
+      });
+    });
+
+    recvConn.on('data', data => {
+      if (data.type === 'ping') {
+        try { recvConn.send({ type: 'pong' }); } catch (_) {}
+        return;
+      }
+      if (data.type === 'pong') return;
+
+      switch (data.type) {
+        case 'manifest':  onManifest(data); break;
+        case 'start':     onStart(data);    break;
+        case 'chunk':     onChunk(data);    break;
+        case 'done':      onDone(data);     break;
+      }
+    });
+
+    recvConn.on('close', () => {
+      toast('Sender disconnected', 'warn');
+      document.getElementById('recv-step1').style.display = 'block';
+      document.getElementById('recv-step2').style.display = 'none';
+      hideSenderCard();
+      btn.disabled = false;
+      stopKeepAwake();
+    });
+
+    recvConn.on('error', err => {
+      setRecvStatus('❌ Connection error: ' + err.message);
+      btn.disabled = false;
+    });
+  });
+
+  peer.on('error', (err) => {
+    setRecvStatus('❌ ' + (err.type === 'peer-unavailable'
+      ? 'Sender not found. Verify the code and ensure sender is online.'
+      : err.message));
+    btn.disabled = false;
+    stopKeepAwake();
+  });
+}
+
+function onManifest(data) {
+  recvFiles = data.files;
+  document.getElementById('recvSourceLabel').textContent = data.label || '📁 Shared File';
+  document.getElementById('recvFileCountLabel').textContent = recvFiles.length === 1 ? 'FILE READY' : `FILES READY (${recvFiles.length})`;
+  document.getElementById('recv-step1').style.display = 'none';
+  document.getElementById('recv-step2').style.display = 'block';
+
+  if (data.senderName) {
+    document.getElementById('senderDeviceIcon').textContent = data.senderIcon || '💻';
+    document.getElementById('senderDeviceName').textContent = data.senderName;
+    document.getElementById('senderDeviceSub').textContent  = `${data.senderBrowser || 'Browser'} · Connected via P2P`;
+    document.getElementById('senderDeviceCard').style.display = 'flex';
+  }
+
+  const mainBtn = document.getElementById('recvDownloadMainBtn');
+  if (recvFiles.length === 1) {
+    mainBtn.textContent = recvFiles[0].isZip ? '⬇ Download ZIP' : '⬇ Download File';
+  } else {
+    mainBtn.textContent = '⬇ Download All';
+  }
+
+  renderRecvFileList(recvFiles);
+}
+
+function hideSenderCard() {
+  document.getElementById('senderDeviceCard').style.display = 'none';
+}
+
+function onStart(data) {
+  recvBufs[data.index] = {
+    chunks: [], total: data.total, received: 0,
+    startTime: Date.now(), lastTime: Date.now(), lastBytes: 0, bps: 0,
+  };
+  showProgBar(data.index, true);
+  updateProgBar(data.index, 0, data.total, 0);
+}
+
+function onChunk(data) {
+  const b = recvBufs[data.index];
+  if (!b) return;
+  b.chunks.push(data.data);
+  b.received += data.data.byteLength;
+
+  const now = Date.now();
+  const elapsed = now - b.lastTime;
+  if (elapsed >= SPEED_WINDOW) {
+    b.bps = (b.received - b.lastBytes) / (elapsed / 1000);
+    b.lastTime = now; b.lastBytes = b.received;
+  }
+  updateProgBar(data.index, b.received, b.total, b.bps);
+}
+
+function onDone(data) {
+  const b = recvBufs[data.index];
+  if (!b) return;
+  const elapsed = (Date.now() - b.startTime) / 1000;
+  const avgSpeed = elapsed > 0 ? b.total / elapsed : 0;
+
+  const mime = recvFiles[data.index]?.type || 'application/octet-stream';
+  triggerDownload(new Blob(b.chunks, { type: mime }), recvFiles[data.index]?.name || 'file');
+
+  delete recvBufs[data.index];
+  showProgBar(data.index, false);
+  resetDlBtn(data.index);
+  toast(`Downloaded ${recvFiles[data.index]?.name} (${formatSpeed(avgSpeed)})`, 'success');
+}
+
+function updateProgBar(idx, received, total, bps) {
+  const pct  = total > 0 ? Math.round(received / total * 100) : 0;
+  const fill = document.getElementById(`prog-fill-${idx}`);
+  const lbl  = document.getElementById(`prog-label-${idx}`);
+  const spd  = document.getElementById(`prog-speed-${idx}`);
+  const eta  = document.getElementById(`prog-eta-${idx}`);
+  if (fill) fill.style.width = pct + '%';
+  if (lbl)  lbl.textContent  = `${pct}% (${formatBytes(received)} / ${formatBytes(total)})`;
+  if (spd)  spd.textContent  = bps > 0 ? formatSpeed(bps) : '';
+  if (eta)  eta.textContent  = bps > 0 ? formatEta(total - received, bps) : '';
+}
+
+function showProgBar(idx, show) {
+  const el = document.getElementById(`prog-wrap-${idx}`);
+  if (el) el.style.display = show ? 'block' : 'none';
+  const item = document.getElementById(`rfi-${idx}`);
+  if (item) item.classList.toggle('active-transfer', show);
+}
+
+function resetDlBtn(idx) {
+  const btn = document.getElementById(`dl-btn-${idx}`);
+  if (btn) { btn.disabled = false; btn.textContent = '⬇ Download'; }
+}
+
+function renderRecvFileList(files) {
+  document.getElementById('recvFileList').innerHTML = files.map((f, i) => `
+    <div class="file-item" id="rfi-${i}">
+      <div class="fi-row">
+        <div class="fi-left">
+          <span class="fi-icon">${f.isZip ? '🗜️' : fileIcon(f.name)}</span>
+          <div class="fi-info">
+            <div class="fi-name">${escHtml(f.name)}</div>
+            <div class="fi-meta">${f.isZip && f.originalCount ? `Single ZIP Archive · Contains ${f.originalCount} files` : escHtml(f.type || 'File')}</div>
+          </div>
+        </div>
+        <div class="fi-right">
+          <span class="fi-size">${formatBytes(f.size)}</span>
+          <button class="btn btn-green btn-sm" id="dl-btn-${i}" onclick="downloadFile(${i})">⬇ Download</button>
+        </div>
+      </div>
+      <div class="prog-wrap" id="prog-wrap-${i}">
+        <div class="prog-info">
+          <span class="prog-label" id="prog-label-${i}">0%</span>
+          <span class="prog-speed" id="prog-speed-${i}"></span>
+          <span class="prog-eta"   id="prog-eta-${i}"></span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill green-fill" id="prog-fill-${i}" style="width:0%"></div></div>
+      </div>
+    </div>`).join('');
+}
+
+function downloadFile(idx) {
+  if (!recvConn?.open) { toast('Not connected to sender', 'warn'); return; }
+  const btn = document.getElementById('dl-btn-' + idx);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
+  recvConn.send({ type: 'request', index: idx });
+}
+
+function downloadAll() {
+  if (!recvConn?.open) { toast('Not connected to sender', 'warn'); return; }
+  if (recvFiles.length === 1) {
+    downloadFile(0);
+    return;
+  }
+  recvFiles.forEach((_, i) => {
+    const btn = document.getElementById('dl-btn-' + i);
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ …'; }
+  });
+  recvConn.send({ type: 'request_all' });
+  toast('Downloading all files…', 'info');
+}
+
+function triggerDownload(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+function setRecvStatus(htmlMsg) {
+  document.getElementById('recv-connect-status').innerHTML = htmlMsg;
+}
+
+function disconnectRecv() {
+  closeQrScanner();
+  stopKeepAwake();
+  if (recvConn) { try { recvConn.close(); } catch(_) {} recvConn = null; }
+  if (recvPeer) { try { recvPeer.destroy(); } catch(_) {} recvPeer = null; }
+  recvFiles = []; recvBufs = {};
+  document.getElementById('recv-step1').style.display = 'block';
+  document.getElementById('recv-step2').style.display = 'none';
+  document.getElementById('connectBtn').disabled = false;
+  setPinInputValue('');
+  hideSenderCard();
+  setRecvStatus('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  initPinInputs();
+  const code = new URLSearchParams(location.search).get('code');
+  if (code && /^\d{6}$/.test(code)) goReceive();
+});
+</script>
+</body>
+</html>
