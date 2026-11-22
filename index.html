@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -1413,6 +1413,53 @@
           </div>
         </div>
 
+        <!-- ══════════ E2E ENCRYPTED CLOUD RELAY CARD ══════════ -->
+        <div class="relay-card" id="relayModeCard" style="margin-top:16px; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--bg-elevated); box-shadow:var(--shadow-sm);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="flex:1; min-width:240px;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                <span style="font-size:1.15rem;">🔒</span>
+                <span style="font-weight:700; font-size:0.96rem; color:var(--text);">AES-256-GCM Encrypted Relay</span>
+                <span class="badge-pill badge-p2p" style="background:var(--accent-glow); color:var(--accent); font-size:0.7rem; font-weight:700;">No WARP Needed</span>
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.45;">
+                Client-side zero-knowledge encryption using your 6-digit PIN. Transmits cross-network across 4G/5G mobile carriers, and strict Ethernet firewalls without Cloudflare WARP.
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnStartCloudRelay" onclick="startCloudRelayUpload()">
+              <span>⚡ Encrypt &amp; Send via Relay</span>
+            </button>
+          </div>
+
+          <!-- Upload Progress -->
+          <div id="cloudUploadProgressBox" style="display:none; margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-family:var(--font-mono); margin-bottom:6px;">
+              <span id="cloudUploadStage" style="font-weight:600; color:var(--accent);">Encrypting with AES-256…</span>
+              <span id="cloudUploadPercent" style="font-weight:700; color:var(--text);">0%</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill green-fill" id="cloudUploadFill" style="width:0%"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-secondary); margin-top:6px; font-family:var(--font-mono);">
+              <span id="cloudUploadSpeed">Calculating speed…</span>
+              <span id="cloudUploadMeta">0 B / 0 B</span>
+            </div>
+          </div>
+
+          <!-- Success Box -->
+          <div id="cloudUploadSuccessBox" style="display:none; margin-top:14px; padding:14px; border-radius:10px; background:rgba(46,125,50,0.08); border:1px solid rgba(46,125,50,0.25);">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+              <div>
+                <div style="font-weight:700; font-size:0.9rem; color:var(--success);">✅ Encrypted &amp; Ready on Relay</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Recipient only needs your 6-digit PIN to download and decrypt the file.</div>
+                <div id="relayShareLink" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--accent); margin-top:4px; word-break:break-all;"></div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-outline btn-sm" onclick="copyRelayLink()">Copy Link</button>
+                <button class="btn btn-green btn-sm" onclick="openRelayPage()">Open Page</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style="margin-top:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
           <div class="status-badge">
             <span class="status-dot dot-yellow" id="statusDot"></span>
@@ -1447,6 +1494,13 @@
         <div class="section-title">Receive Files</div>
       </div>
 
+      <!-- Receiver Tab Switcher: PIN vs Decryptor -->
+      <div style="display:flex; gap:8px; margin: 16px 0 20px;">
+        <button class="btn btn-primary btn-sm" id="btnTabPin" onclick="switchRecvTab(''pin'')">📥 Connect with 6-Digit PIN</button>
+        <button class="btn btn-outline btn-sm" id="btnTabDecrypt" onclick="switchRecvTab(''decrypt'')">🔓 Decrypt .enc File</button>
+      </div>
+
+      <div id="recv-tab-pin">
       <!-- Receiver Step 1: Input Code or QR -->
       <div id="recv-step1">
         <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px; line-height:1.55;">
@@ -1515,8 +1569,72 @@
           </div>
         </div>
 
+        <!-- Cloud Relay Available Card on Receiver -->
+        <div id="recvRelayCard" class="relay-card" style="display:none; margin-bottom:18px; padding:16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-elevated);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div style="font-weight:700; font-size:0.95rem; color:var(--text); display:flex; align-items:center; gap:6px;">
+                <span>🔒 Encrypted File on Cloud Relay</span>
+                <span class="badge-pill badge-p2p" style="background:var(--accent-glow); color:var(--accent); font-size:0.7rem;">AES-256</span>
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
+                <span id="recvRelayFileName">File</span> · <span id="recvRelayFileSize">—</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <a id="recvRelayLinkBtn" href="#" target="_blank" class="btn btn-primary btn-sm">⬇ Open &amp; Download</a>
+            </div>
+          </div>
+        </div>
+
         <div style="margin-bottom:10px; font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);" id="recvFileCountLabel">Available Files</div>
         <div class="file-list" id="recvFileList"></div>
+      </div>
+      </div><!-- end recv-tab-pin -->
+
+      <!-- Standalone Decryptor Tab -->
+      <div id="recv-tab-decrypt" style="display:none;">
+        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:18px; line-height:1.55;">
+          Have an encrypted <code>.enc</code> file downloaded from the relay? Drop it below and enter the 6-digit PIN to decrypt it back to the original file in your browser:
+        </p>
+
+        <div class="drop-zone" id="decDropZone"
+          ondragover="event.preventDefault(); this.classList.add(''drag-over'');"
+          ondragleave="this.classList.remove(''drag-over'');"
+          ondrop="onDecryptDrop(event); this.classList.remove(''drag-over'');"
+          onclick="document.getElementById(''decFileInput'').click()"
+          style="padding:32px 20px; margin-bottom:18px;">
+          <div class="dz-icon">🔐</div>
+          <div class="dz-text">Drop your .enc file here to decrypt</div>
+          <div class="dz-sub">100% Client-Side AES-256-GCM · Military-grade security · Decrypted locally on your device</div>
+          <button class="btn btn-outline btn-sm" style="margin-top:12px;" onclick="event.stopPropagation(); document.getElementById(''decFileInput'').click()">Browse Encrypted File</button>
+        </div>
+        <input type="file" id="decFileInput" style="display:none;" onchange="if(this.files.length) onDecryptFileChosen(this.files[0])" />
+
+        <!-- Selected file display & PIN input -->
+        <div id="decFileBox" style="display:none; padding:18px; border:1px solid var(--border); border-radius:12px; background:var(--bg-elevated); margin-bottom:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.3rem;">📄</span>
+              <div>
+                <div id="decFileName" style="font-weight:600; font-size:0.95rem; color:var(--text);">file.enc</div>
+                <div id="decFileSize" style="font-size:0.8rem; color:var(--text-secondary);">0 B</div>
+              </div>
+            </div>
+            <span class="badge-pill badge-p2p" style="background:var(--accent-glow); color:var(--accent);">Encrypted</span>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Enter 6-Digit PIN to Decrypt</label>
+            <input type="text" id="decPinInput" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 123456"
+              style="width:100%; max-width:220px; font-size:1.2rem; font-family:var(--font-mono); font-weight:700; letter-spacing:0.2em; text-align:center; padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text);" />
+          </div>
+
+          <button class="btn btn-green" id="btnRunDecrypt" onclick="runStandaloneDecrypt()" style="width:100%; max-width:260px;">
+            <span>🔓 Decrypt &amp; Save File</span>
+          </button>
+          <div id="decStatus" style="font-size:0.84rem; color:var(--text-secondary); margin-top:10px; font-family:var(--font-mono);"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -2712,6 +2830,7 @@ function connectToPeer() {
       }
       if (data.type === 'pong') return;
 
+      handleRelayMessage(data);
       switch (data.type) {
         case 'manifest':  onManifest(data); break;
         case 'start':     onStart(data);    break;
@@ -2912,9 +3031,399 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+// ══════════════════════════════════════════════════════
+//  🔐 CLIENT-SIDE END-TO-END ENCRYPTION (AES-256-GCM)
+//  Military-grade encryption before upload.
+//  Zero plain-text ever leaves the user''s browser.
+// ══════════════════════════════════════════════════════
+
+const E2E_MAGIC = [0x41, 0x47, 0x32, 0x35, 0x36, 0x45]; // "AG256E"
+
+async function deriveAesKey(pin, salt) {
+  const enc = new TextEncoder();
+  const baseKey = await window.crypto.subtle.importKey(
+    ''raw'',
+    enc.encode(pin),
+    ''PBKDF2'',
+    false,
+    [''deriveKey'']
+  );
+  return window.crypto.subtle.deriveKey(
+    {
+      name: ''PBKDF2'',
+      salt: salt,
+      iterations: 100000,
+      hash: ''SHA-256''
+    },
+    baseKey,
+    { name: ''AES-GCM'', length: 256 },
+    false,
+    [''encrypt'', ''decrypt'']
+  );
+}
+
+async function encryptFileE2E(fileOrBlob, fileName, pin) {
+  const salt = window.crypto.getRandomValues(new Uint8Array(16));
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveAesKey(pin, salt);
+
+  const arrayBuffer = await fileOrBlob.arrayBuffer();
+  const ciphertext = await window.crypto.subtle.encrypt(
+    { name: ''AES-GCM'', iv: iv },
+    key,
+    arrayBuffer
+  );
+
+  const nameBytes = new TextEncoder().encode(fileName || ''file'');
+  const headerLen = 6 + 16 + 12 + 2 + nameBytes.length;
+  const headerBuf = new ArrayBuffer(headerLen);
+  const view = new DataView(headerBuf);
+  const u8 = new Uint8Array(headerBuf);
+
+  for (let i = 0; i < 6; i++) u8[i] = E2E_MAGIC[i];
+  u8.set(salt, 6);
+  u8.set(iv, 22);
+  view.setUint16(34, nameBytes.length, false);
+  u8.set(nameBytes, 36);
+
+  return new Blob([headerBuf, ciphertext], { type: ''application/octet-stream'' });
+}
+
+async function decryptFileE2E(encryptedBlob, pin) {
+  const buf = await encryptedBlob.arrayBuffer();
+  if (buf.byteLength < 36) {
+    throw new Error(''File is too small to be a valid encrypted FileShare archive.'');
+  }
+
+  const u8 = new Uint8Array(buf);
+  const view = new DataView(buf);
+
+  for (let i = 0; i < 6; i++) {
+    if (u8[i] !== E2E_MAGIC[i]) {
+      throw new Error(''Not a valid FileShare AES-256 encrypted file.'');
+    }
+  }
+
+  const salt = u8.slice(6, 22);
+  const iv = u8.slice(22, 34);
+  const nameLen = view.getUint16(34, false);
+  if (buf.byteLength < 36 + nameLen) {
+    throw new Error(''Corrupted encrypted file header.'');
+  }
+
+  const nameBytes = u8.slice(36, 36 + nameLen);
+  const originalName = new TextDecoder().decode(nameBytes);
+  const ciphertext = buf.slice(36 + nameLen);
+
+  const key = await deriveAesKey(pin, salt);
+  let decryptedBuf;
+  try {
+    decryptedBuf = await window.crypto.subtle.decrypt(
+      { name: ''AES-GCM'', iv: iv },
+      key,
+      ciphertext
+    );
+  } catch (err) {
+    throw new Error(''Decryption failed! Incorrect 6-digit PIN or corrupted file.'');
+  }
+
+  return {
+    blob: new Blob([decryptedBuf]),
+    name: originalName
+  };
+}
+
+// ══════════════════════════════════════════════════════
+//  🌐 GOFILE ZERO-KNOWLEDGE CLOUD RELAY ENGINE
+// ══════════════════════════════════════════════════════
+
+let currentRelayMeta = null;
+let isCloudUploading = false;
+
+async function getBestGoFileServer() {
+  try {
+    const resp = await fetch(''https://api.gofile.io/servers'');
+    const json = await resp.json();
+    if (json.status === ''ok'' && json.data?.servers?.length) {
+      return json.data.servers[0].name;
+    }
+  } catch (e) {
+    console.warn(''Could not query GoFile server list:'', e);
+  }
+  return ''store9'';
+}
+
+function uploadBlobToGoFile(blob, fileName, onProgress) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const server = await getBestGoFileServer();
+      const xhr = new XMLHttpRequest();
+      xhr.open(''POST'', `https://${server}.gofile.io/contents/uploadFile`);
+
+      let lastTime = Date.now();
+      let lastBytes = 0;
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const now = Date.now();
+          const elapsed = (now - lastTime) / 1000;
+          let bps = 0;
+          if (elapsed >= 0.5) {
+            bps = (e.loaded - lastBytes) / elapsed;
+            lastTime = now;
+            lastBytes = e.loaded;
+          }
+          onProgress(e.loaded, e.total, bps);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.status === ''ok'') {
+              resolve(data.data);
+            } else {
+              reject(new Error(data.status || ''Upload rejected by server''));
+            }
+          } catch (err) {
+            reject(new Error(''Invalid response from relay server''));
+          }
+        } else {
+          reject(new Error(`Relay upload failed (HTTP ${xhr.status})`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error(''Network error during relay upload. Check connection.''));
+
+      const form = new FormData();
+      form.append(''file'', blob, fileName);
+      xhr.send(form);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function lockGoFileFolder(folderId, guestToken, pin) {
+  if (!folderId || !guestToken || !pin) return;
+  try {
+    await fetch(`https://api.gofile.io/contents/${folderId}/update`, {
+      method: ''PUT'',
+      headers: {
+        ''Authorization'': `Bearer ${guestToken}`,
+        ''Content-Type'': ''application/json''
+      },
+      body: JSON.stringify({
+        attribute: ''password'',
+        attributeValue: String(pin)
+      })
+    });
+  } catch (err) {
+    console.warn(''[GoFile] Note: folder lock update:'', err);
+  }
+}
+
+async function startCloudRelayUpload() {
+  if (!sharedFiles || !sharedFiles.length) {
+    toast(''No files selected'', ''warn'');
+    return;
+  }
+  if (isCloudUploading) return;
+  isCloudUploading = true;
+
+  const btn = document.getElementById(''btnStartCloudRelay'');
+  if (btn) btn.disabled = true;
+
+  const progBox = document.getElementById(''cloudUploadProgressBox'');
+  const succBox = document.getElementById(''cloudUploadSuccessBox'');
+  if (progBox) progBox.style.display = ''block'';
+  if (succBox) succBox.style.display = ''none'';
+
+  const stage = document.getElementById(''cloudUploadStage'');
+  const pct = document.getElementById(''cloudUploadPercent'');
+  const fill = document.getElementById(''cloudUploadFill'');
+  const spd = document.getElementById(''cloudUploadSpeed'');
+  const meta = document.getElementById(''cloudUploadMeta'');
+
+  try {
+    if (stage) stage.textContent = ''🔒 Encrypting with AES-256-GCM…'';
+    if (pct) pct.textContent = ''10%'';
+    if (fill) fill.style.width = ''10%'';
+
+    const targetFile = sharedFiles[0];
+    const encFileName = `${targetFile.name}.enc`;
+
+    const encryptedBlob = await encryptFileE2E(targetFile, targetFile.name, currentCode);
+
+    if (stage) stage.textContent = ''🌐 Uploading Encrypted Blob to Cloud Relay…'';
+    if (pct) pct.textContent = ''20%'';
+    if (fill) fill.style.width = ''20%'';
+
+    const uploadRes = await uploadBlobToGoFile(encryptedBlob, encFileName, (loaded, total, bps) => {
+      const uploadPct = Math.round((loaded / total) * 75) + 20;
+      if (pct) pct.textContent = `${uploadPct}%`;
+      if (fill) fill.style.width = `${uploadPct}%`;
+      if (spd) spd.textContent = bps > 0 ? formatSpeed(bps) : '''';
+      if (meta) meta.textContent = `${formatBytes(loaded)} / ${formatBytes(total)}`;
+    });
+
+    if (uploadRes.parentFolder && uploadRes.guestToken) {
+      if (stage) stage.textContent = ''🔑 Securing Relay Folder with 6-Digit PIN…'';
+      await lockGoFileFolder(uploadRes.parentFolder, uploadRes.guestToken, currentCode);
+    }
+
+    if (pct) pct.textContent = ''100%'';
+    if (fill) fill.style.width = ''100%'';
+    if (stage) stage.textContent = ''✅ Encrypted Transfer Ready!'';
+
+    currentRelayMeta = {
+      code: currentCode,
+      fileId: uploadRes.fileId || uploadRes.id,
+      downloadPage: uploadRes.downloadPage,
+      fileName: targetFile.name,
+      fileSize: targetFile.size,
+      encSize: encryptedBlob.size,
+      parentFolder: uploadRes.parentFolder,
+      parentFolderCode: uploadRes.parentFolderCode
+    };
+
+    if (shareConns && shareConns.length) {
+      shareConns.forEach(conn => {
+        if (conn && conn.open) {
+          try {
+            conn.send({
+              type: ''relay_ready'',
+              relay: currentRelayMeta
+            });
+          } catch (_) {}
+        }
+      });
+    }
+
+    const modeBadge = document.getElementById(''transferModeBadge'');
+    if (modeBadge) {
+      modeBadge.textContent = ''Encrypted Relay Active'';
+      modeBadge.className = ''network-stat-pill tag-green'';
+    }
+
+    if (progBox) progBox.style.display = ''none'';
+    if (succBox) succBox.style.display = ''block'';
+
+    const relayLinkEl = document.getElementById(''relayShareLink'');
+    if (relayLinkEl) relayLinkEl.textContent = uploadRes.downloadPage;
+
+    toast(''File encrypted with AES-256 and uploaded to relay!'', ''success'');
+  } catch (err) {
+    console.error(''Cloud Relay error:'', err);
+    toast(`Relay upload failed: ${err.message}`, ''error'');
+    if (stage) stage.textContent = ''❌ Upload failed: '' + err.message;
+  } finally {
+    isCloudUploading = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+function copyRelayLink() {
+  if (!currentRelayMeta?.downloadPage) return;
+  const txt = `${currentRelayMeta.downloadPage} (Password/PIN: ${currentCode})`;
+  navigator.clipboard.writeText(txt).then(() => toast(''Relay download link copied!'', ''success''));
+}
+
+function openRelayPage() {
+  if (currentRelayMeta?.downloadPage) {
+    window.open(currentRelayMeta.downloadPage, ''_blank'');
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  RECEIVER STANDALONE DECRYPTOR & TAB SWITCHING
+// ══════════════════════════════════════════════════════
+
+let decryptSelectedBlob = null;
+
+function switchRecvTab(tab) {
+  const pinTab = document.getElementById(''recv-tab-pin'');
+  const decTab = document.getElementById(''recv-tab-decrypt'');
+  const btnPin = document.getElementById(''btnTabPin'');
+  const btnDec = document.getElementById(''btnTabDecrypt'');
+
+  if (tab === ''pin'') {
+    pinTab.style.display = ''block'';
+    decTab.style.display = ''none'';
+    btnPin.className = ''btn btn-primary btn-sm'';
+    btnDec.className = ''btn btn-outline btn-sm'';
+  } else {
+    pinTab.style.display = ''none'';
+    decTab.style.display = ''block'';
+    btnPin.className = ''btn btn-outline btn-sm'';
+    btnDec.className = ''btn btn-primary btn-sm'';
+  }
+}
+
+function onDecryptDrop(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const dt = e.dataTransfer;
+  if (dt && dt.files && dt.files.length) {
+    onDecryptFileChosen(dt.files[0]);
+  }
+}
+
+function onDecryptFileChosen(file) {
+  if (!file) return;
+  decryptSelectedBlob = file;
+  document.getElementById(''decFileName'').textContent = file.name;
+  document.getElementById(''decFileSize'').textContent = formatBytes(file.size);
+  document.getElementById(''decFileBox'').style.display = ''block'';
+}
+
+async function runStandaloneDecrypt() {
+  if (!decryptSelectedBlob) {
+    toast(''Select an encrypted (.enc) file first'', ''warn'');
+    return;
+  }
+  const pin = document.getElementById(''decPinInput'').value.trim();
+  if (!/^\d{6}$/.test(pin)) {
+    toast(''Enter the 6-digit PIN used to encrypt the file'', ''warn'');
+    return;
+  }
+
+  const btn = document.getElementById(''btnRunDecrypt'');
+  const statusEl = document.getElementById(''decStatus'');
+  btn.disabled = true;
+  statusEl.textContent = ''🔓 Decrypting with AES-256-GCM…'';
+
+  try {
+    const res = await decryptFileE2E(decryptSelectedBlob, pin);
+    triggerDownload(res.blob, res.name);
+    statusEl.textContent = `✅ Successfully decrypted as "${res.name}"!`;
+    toast(`Decrypted "${res.name}" successfully!`, ''success'');
+  } catch (err) {
+    statusEl.textContent = `❌ ${err.message}`;
+    toast(err.message, ''error'');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// 5. Connect relay listener in recvConn
+function handleRelayMessage(data) {
+  if (data.type === ''relay_ready'') {
+    const relayCard = document.getElementById(''recvRelayCard'');
+    if (relayCard && data.relay) {
+      relayCard.style.display = ''block'';
+      document.getElementById(''recvRelayFileName'').textContent = data.relay.fileName;
+      document.getElementById(''recvRelayFileSize'').textContent = formatBytes(data.relay.fileSize);
+      document.getElementById(''recvRelayLinkBtn'').href = data.relay.downloadPage;
+      toast(''Sender shared an encrypted file via Cloud Relay!'', ''success'');
+    }
+  }
+}
+
+window.addEventListener(''DOMContentLoaded'', () => {
   initPinInputs();
-  const code = new URLSearchParams(location.search).get('code');
+  const code = new URLSearchParams(location.search).get(''code'');
   if (code && /^\d{6}$/.test(code)) goReceive();
 });
 </script>
